@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Questly - Level Up Your Day</title>
+<meta name="theme-color" content="#2f5bff">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect y='4' width='64' height='60' rx='16' fill='%23e0a100'/%3E%3Crect width='64' height='59' rx='16' fill='%23ffc933'/%3E%3Cpolygon points='37,8 17,34 29,34 25,52 47,25 35,25' fill='%230f1a44'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#f2f5ff;--card:#fff;--ink:#0f1a44;--mut:#6571a1;--line:#e0e7fb;--blue:#2f5bff;--gold:#ffc933;--gold2:#e0a100;--shadow:0 6px 24px rgba(31,52,140,.08);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -154,6 +156,68 @@ body{background:
   0%,100%{transform:rotate(0) scale(1)}
   50%{transform:rotate(-7deg) scale(1.06)}
 }
+
+/* ===== Click pop animation ===== */
+.clk-ring{position:fixed;z-index:80;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;border:3px solid var(--gold);pointer-events:none;animation:clkRing .55s ease-out forwards}
+.clk-dot{position:fixed;z-index:80;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:var(--c);pointer-events:none;animation:clkDot .6s cubic-bezier(.15,.7,.3,1) forwards}
+.clk-star{position:fixed;z-index:80;font-size:22px;line-height:1;pointer-events:none;transform:translate(-50%,-50%);animation:clkStar .7s cubic-bezier(.2,1.6,.4,1) forwards}
+@keyframes clkRing{from{transform:scale(.3);opacity:1}to{transform:scale(4);opacity:0}}
+@keyframes clkDot{from{transform:translate(0,0) scale(1);opacity:1}to{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}
+@keyframes clkStar{0%{transform:translate(-50%,-50%) scale(.2);opacity:0}35%{transform:translate(-50%,-90%) scale(1.25);opacity:1}100%{transform:translate(-50%,-190%) scale(.8);opacity:0}}
+@media (prefers-reduced-motion:reduce){.clk-ring,.clk-dot,.clk-star{display:none}}
+
+/* ===== Class schedule ===== */
+.sch-form{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px}
+.sch-form .full{grid-column:1/-1}
+.sch-form label{font-size:12px;color:var(--mut);font-weight:500;margin-top:4px}
+.day-h{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.day-h .tag{background:var(--blue);color:#fff;font-size:11px;font-weight:600;padding:2px 9px;border-radius:99px}
+.cls{gap:12px}
+.cls .cbar{flex:none;width:5px;align-self:stretch;min-height:38px;border-radius:4px;background:var(--c,var(--blue))}
+.cls .time{flex:none;width:86px;font-weight:600;font-size:14px;line-height:1.3}
+@media (max-width:480px){.cls .time{width:76px;font-size:13px}}
+
+/* ===== Scrollable tabs (7 tabs) ===== */
+.tabs{overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{flex:1 0 auto;white-space:nowrap;padding:10px 14px}
+@media (max-width:480px){.tabs button{font-size:13px;padding:10px 11px}}
+.tabs::before{left:0;right:0;width:auto;transform:none;background:linear-gradient(90deg,transparent 40%,rgba(255,255,255,.13) 50%,transparent 60%);background-size:250% 100%;animation:shine2 5s ease-in-out infinite}
+@keyframes shine2{0%,55%{background-position:100% 0}75%,100%{background-position:0 0}}
+textarea{width:100%;padding:13px 14px;border-radius:14px;border:2px solid var(--line);background:var(--bg);color:var(--ink);font-size:16px;font-family:inherit;margin:6px 0;resize:vertical}
+textarea:focus{outline:none;border-color:var(--blue)}
+
+/* ===== Quiz cards ===== */
+.nofloat{animation:none}
+.mbar{height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:10px}
+.mbar div{height:100%;background:linear-gradient(90deg,#ffd75e,var(--gold));border-radius:99px;transition:width .4s}
+.deck-btns{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center}
+.deck-btns .pill{flex:1}
+.fc{perspective:1200px;cursor:pointer;margin:16px 0;animation:cardIn .35s ease-out}
+.fc-in{position:relative;min-height:270px;transform-style:preserve-3d;transition:transform .55s cubic-bezier(.3,1.3,.5,1)}
+.fc.flipped .fc-in{transform:rotateY(180deg)}
+.fc-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:22px;padding:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;border:2px solid var(--line);box-shadow:var(--shadow);overflow:auto}
+.fc-front{background:var(--card)}
+.fc-back{background:linear-gradient(145deg,#12257a,#2f5bff);color:#fff;border-color:transparent;transform:rotateY(180deg)}
+.fc-t{font-size:24px;font-weight:600;line-height:1.35;word-break:break-word}
+.fc-lbl{font-size:11px;letter-spacing:.12em;font-weight:600;opacity:.65}
+@keyframes cardIn{from{opacity:0;transform:translateX(30px) scale(.97)}}
+.fc-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn.again{background:var(--card);color:var(--ink);border:2px solid var(--line);box-shadow:0 4px 0 var(--line)}
+.qq{font-size:22px;font-weight:600;line-height:1.35;margin:8px 0 14px;word-break:break-word}
+.opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:14px;margin:8px 0;border-radius:14px;border:2px solid var(--line);background:var(--bg);color:var(--ink);font-size:16px;cursor:pointer;transition:transform .15s,border-color .15s,background .15s}
+.opt:hover:not(:disabled){border-color:var(--blue);transform:translateY(-1px)}
+.opt:disabled{color:var(--ink);cursor:default}
+.opt .key{flex:none;width:26px;height:26px;border-radius:8px;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;font-size:13px}
+.opt.good{border-color:#2ecc71;background:rgba(46,204,113,.18);animation:pop .35s}
+.opt.bad{border-color:#e5484d;background:rgba(229,72,77,.15);animation:shake .35s}
+.opt.dim{opacity:.55}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.fb{text-align:center;font-weight:600;margin:10px 0 2px}
+.fb.good{color:#2ecc71}.fb.bad{color:#e5484d}
+.donebox{text-align:center;padding:10px 0}
+.donebox h2{margin:6px 0;font-size:30px;color:var(--blue)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
 </style>
 </head>
 <body>
@@ -174,7 +238,7 @@ const streak=a=>{const s=new Set(a);let i=s.has(shift(0))?0:1,n=0;while(s.has(sh
 const hash=s=>{let h=5381;for(const c of s)h=((h<<5)+h+c.charCodeAt(0))>>>0;return h.toString(36)};
 const lvl=xp=>Math.floor(xp/100)+1;
 const AV=['🦊','🐼','🐸','🦁','🐙','🦉','🐲','🚀'];
-const BG=[['🗡️','First Quest',u=>u.done>=1],['⚔️','10 Quests',u=>u.done>=10],['🔥','3-Day Streak',u=>u.best>=3],['🌟','7-Day Streak',u=>u.best>=7],['👑','30-Day Streak',u=>u.best>=30],['🛡️','Level 5',u=>lvl(u.xp)>=5],['💯','50 Check-ins',u=>u.chk>=50]];
+const BG=[['🗡️','First Quest',u=>u.done>=1],['⚔️','10 Quests',u=>u.done>=10],['🔥','3-Day Streak',u=>u.best>=3],['🌟','7-Day Streak',u=>u.best>=7],['👑','30-Day Streak',u=>u.best>=30],['🛡️','Level 5',u=>lvl(u.xp)>=5],['💯','50 Check-ins',u=>u.chk>=50],['🤝','First Friend',u=>(u.friends||[]).length>=1],['🧠','Study Session',u=>(u.studied||0)>=1]];
 let tab='quests',mode='signup',pickAv='🦊',err='',form={un:'',pw:''};
 const me=()=>db.cur&&db.users[db.cur];
 
@@ -307,16 +371,155 @@ function reviewers(u){
     </div>`;
 }
 
+const DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+let schDay=null,schS='08:00',schE='09:30';
+const fmtT=t=>{const[h,m]=t.split(':').map(Number);return ((h%12)||12)+':'+String(m).padStart(2,'0')+(h<12?' AM':' PM')};
+const colorFor=n=>{let h=0;for(const c of n.toLowerCase())h=(h*31+c.charCodeAt(0))%360;return 'hsl('+h+' 70% 55%)'};
+function schedule(u){
+ u.schedule=u.schedule||[];
+ const ti=(new Date().getDay()+6)%7,sel=schDay==null?ti:schDay;
+ const groups=DAYS.map((d,i)=>({d,i,list:u.schedule.filter(c=>c.day==i).sort((a,b)=>a.start.localeCompare(b.start))})).filter(g=>g.list.length);
+ const row=c=>`<li class="cls" style="--c:${colorFor(c.name)}"><span class="cbar"></span><div class="time">${fmtT(c.start)}<br><span class="mut small">to ${fmtT(c.end)}</span></div><div class="grow"><b>${esc(c.name)}</b>${c.room?`<div class="mut small">📍 ${esc(c.room)}</div>`:''}</div><button class="x" data-act="cdel" data-v="${c.id}" title="Remove class">×</button></li>`;
+ return `<div class="card">
+  <h3 style="margin:0 0 2px;font-size:19px">🗓️ My Class Schedule</h3>
+  <div class="mut small" style="margin-bottom:8px">Add your classes once and see your week at a glance.</div>
+  <div class="sch-form">
+   <div class="full"><input id="schName" placeholder="Class / subject (e.g. Calculus 1)" maxlength="50"></div>
+   <div class="full"><label for="schDay">Day</label><select id="schDay">${DAYS.map((d,i)=>`<option value="${i}" ${i==sel?'selected':''}>${d}</option>`).join('')}</select></div>
+   <div><label for="schStart">Start</label><input id="schStart" type="time" value="${schS}"></div>
+   <div><label for="schEnd">End</label><input id="schEnd" type="time" value="${schE}"></div>
+   <div class="full"><label for="schRoom">Room / teacher (optional)</label><input id="schRoom" placeholder="e.g. Room 204 · Prof. Reyes" maxlength="50"></div>
+  </div>
+  <button class="btn" data-act="addclass">Add class</button>
+ </div>
+ ${groups.length?groups.map(g=>`<div class="card"><div class="day-h"><b>${g.d}</b>${g.i==ti?'<span class="tag">Today</span>':''}<span class="grow"></span><span class="mut small">${g.list.length} class${g.list.length>1?'es':''}</span></div><ul>${g.list.map(row).join('')}</ul></div>`).join(''):'<div class="card"><div class="empty">🗓️<br>No classes yet.<br>Add your first class above!</div></div>'}`}
+
+/* ===== Quiz cards (flashcards + multiple-choice quiz) ===== */
+let qz={view:'list'};
+const shuf=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const deckOf=u=>(u.decks||[]).find(d=>d.id==qz.deck);
+function qzSetOpts(u){
+ const d=deckOf(u),c=d&&d.cards.find(x=>x.id==qz.queue[0]);
+ qz.pick=null;
+ if(!c){qz.opts=[];return}
+ const others=shuf([...new Set(d.cards.filter(x=>x.id!=c.id&&x.a!==c.a).map(x=>x.a))]).slice(0,3);
+ qz.opts=shuf([c.a,...others]);
+}
+function qzStart(u,deckId,mode,ids){
+ const d=(u.decks||[]).find(x=>x.id==deckId);if(!d)return;
+ const list=ids?d.cards.filter(c=>ids.includes(c.id)):d.cards;
+ if(!list.length){toast('Add some cards first.');return}
+ if(mode=='quiz'&&new Set(d.cards.map(c=>c.a)).size<2){toast('Quiz mode needs at least 2 cards with different answers.');return}
+ qz={view:'study',deck:deckId,mode,queue:shuf(list.map(c=>c.id)),total:list.length,right:0,wrong:0,missed:[],done:false,pick:null,opts:[],awarded:false,xp:0};
+ if(mode=='quiz')qzSetOpts(u);
+}
+function qzFinish(u){
+ qz.done=true;
+ if(qz.awarded)return;
+ qz.awarded=true;
+ u.studied=(u.studied||0)+1;
+ const xp=Math.min(60,qz.right*(qz.mode=='quiz'?5:3)+(qz.wrong==0&&qz.right>0?10:0));
+ qz.xp=xp;
+ confetti(innerWidth/2,innerHeight/3,90);
+ if(xp>0)award(u,xp,'· study session 📚',null);
+}
+function quizTab(u){
+ u.decks=u.decks||[];
+ if(qz.view=='study'&&deckOf(u))return qzStudy(u);
+ if(qz.view=='edit'&&deckOf(u))return qzEdit(u);
+ qz={view:'list'};
+ return qzList(u);
+}
+function qzList(u){
+ const known=d=>d.cards.filter(c=>c.k).length;
+ return `<div class="card"><h3 style="margin:0 0 2px;font-size:19px">🃏 Quiz Cards</h3>
+  <div class="mut small" style="margin-bottom:8px">Build decks, flip flashcards, then test yourself with a quiz. Earn XP for every session.</div>
+  <div class="add"><input id="deckName" placeholder="New deck (e.g. Biology Chapter 3)" maxlength="50"></div>
+  <button class="btn" data-act="adddeck">Create deck</button></div>
+ ${u.decks.length?u.decks.map(d=>`<div class="card nofloat"><div class="subject-top"><span style="font-size:26px">🃏</span><div class="grow"><b>${esc(d.name)}</b><div class="mut small">${d.cards.length} card${d.cards.length==1?'':'s'} · ${known(d)} known</div></div><button class="x" data-act="ddel" data-v="${d.id}" title="Delete deck">×</button></div>
+  <div class="mbar"><div style="width:${d.cards.length?Math.round(known(d)/d.cards.length*100):0}%"></div></div>
+  <div class="deck-btns"><button class="pill" data-act="qflash" data-v="${d.id}">🔄 Flashcards</button><button class="pill" data-act="qquiz" data-v="${d.id}">❓ Quiz</button><button class="ghost" data-act="qopen" data-v="${d.id}">✎ Cards</button></div></div>`).join(''):'<div class="card"><div class="empty">🃏<br>No decks yet.<br>Create one above and add your first cards!</div></div>'}`;
+}
+function qzEdit(u){
+ const d=deckOf(u);
+ return `<div class="card nofloat"><div class="subject-top"><button class="ghost" data-act="qlist">← Decks</button><b class="grow" style="font-size:18px">${esc(d.name)}</b></div>
+  <input id="qzQ" placeholder="Front (question or term)" maxlength="200" style="margin-top:12px">
+  <input id="qzA" placeholder="Back (answer or definition)" maxlength="300">
+  <button class="btn" data-act="addcard">Add card</button></div>
+ <div class="card nofloat"><b>⚡ Quick import</b><div class="mut small">One card per line, written as <b>question :: answer</b>. Paste from your notes!</div>
+  <textarea id="qzBulk" rows="5" placeholder="Powerhouse of the cell :: Mitochondria&#10;H2O :: Water&#10;Capital of France :: Paris"></textarea>
+  <button class="btn" data-act="bulk">Import cards</button></div>
+ <div class="card nofloat"><div class="row"><b>Cards in this deck</b><span class="mut small">${d.cards.length}</span></div>
+  <ul>${d.cards.length?d.cards.map(c=>`<li><div class="grow"><b>${esc(c.q)}</b><div class="mut small">${esc(c.a)}</div></div>${c.k?'<span class="xp">known</span>':''}<button class="x" data-act="kdel" data-v="${c.id}" title="Delete card">×</button></li>`).join(''):'<li class="empty">✏️<br>No cards yet. Add one above!</li>'}</ul></div>`;
+}
+function qzStudy(u){
+ const d=deckOf(u),isQ=qz.mode=='quiz';
+ const answered=qz.total-qz.queue.length;
+ const pct=Math.round((isQ?answered:qz.right)/qz.total*100);
+ const head=`<div class="card nofloat"><div class="subject-top"><button class="ghost" data-act="qexit" title="Exit">✕</button><b class="grow">${esc(d.name)}</b><span class="mut small">${isQ?'Quiz':'Flashcards'}</span></div><div class="mbar" style="margin-top:12px"><div style="width:${qz.done?100:pct}%"></div></div>`;
+ if(qz.done){
+  const perfect=qz.wrong==0,pc=isQ?Math.round(qz.right/qz.total*100):100;
+  return head+`<div class="donebox"><div class="big">${perfect?'🏆':'🎉'}</div><h2>${perfect?'Perfect run!':'Session complete!'}</h2>
+   <p class="mut">${isQ?`You got <b>${qz.right}</b> of <b>${qz.total}</b> right (${pc}%).`:`You went through <b>${qz.total}</b> cards${qz.wrong?` and needed another look ${qz.wrong} time${qz.wrong>1?'s':''}`:' without missing one'}.`}</p>
+   ${qz.xp?`<p><span class="xp">+${qz.xp} XP</span></p>`:''}</div>
+   <button class="btn" data-act="qrestart">${isQ?'Try the quiz again':'Study again'}</button>
+   ${qz.missed.length?`<button class="btn again" data-act="qmissed">Review ${qz.missed.length} missed card${qz.missed.length>1?'s':''}</button>`:''}
+   <button class="btn again" data-act="qlist">Back to decks</button></div>`;
+ }
+ const c=d.cards.find(x=>x.id==qz.queue[0]);
+ if(!c){return head+`<div class="empty">Nothing to study here.</div><button class="btn" data-act="qlist">Back to decks</button></div>`}
+ if(!isQ){
+  return head+`<div class="mut small" style="margin-top:6px">${qz.right} of ${qz.total} known · ${qz.queue.length} left</div>
+   <div class="fc" data-act="qflip"><div class="fc-in"><div class="fc-face fc-front"><span class="fc-lbl mut">QUESTION</span><div class="fc-t">${esc(c.q)}</div><span class="mut small">tap to flip</span></div><div class="fc-face fc-back"><span class="fc-lbl">ANSWER</span><div class="fc-t">${esc(c.a)}</div></div></div></div>
+   <div class="fc-btns"><button class="btn again" data-act="qagain">😵 Still learning</button><button class="btn" data-act="qgot">✅ Got it</button></div>
+   <div class="mut small" style="text-align:center;margin-top:10px">Keys: Space flips · ← still learning · → got it</div></div>`;
+ }
+ const picked=qz.pick!=null,ok=picked&&qz.opts[qz.pick]===c.a;
+ return head+`<div class="mut small" style="margin-top:8px">QUESTION ${Math.min(answered+1,qz.total)} OF ${qz.total}</div>
+  <div class="qq">${esc(c.q)}</div>
+  ${qz.opts.map((o,i)=>`<button class="opt${picked?(o===c.a?' good':i==qz.pick?' bad':' dim'):''}" data-act="qpick" data-v="${i}" ${picked?'disabled':''}><b class="key">${i+1}</b><span>${esc(o)}</span></button>`).join('')}
+  ${picked?`<div class="fb ${ok?'good':'bad'}">${ok?'Correct! 🎉':'Not quite. The right answer is highlighted.'}</div><button class="btn" data-act="qnext">${qz.queue.length>1?'Next question':'See results'}</button>`:`<div class="mut small" style="text-align:center;margin-top:6px">Tip: press 1-${qz.opts.length} to answer</div>`}</div>`;
+}
+
+/* ===== Friends ===== */
+function befriend(u,k){
+ const t=db.users[k];if(!t)return;
+ u.friends=u.friends||[];t.friends=t.friends||[];
+ if(!u.friends.includes(k))u.friends.push(k);
+ if(!t.friends.includes(db.cur))t.friends.push(db.cur);
+ u.reqs=(u.reqs||[]).filter(x=>x!=k);u.sent=(u.sent||[]).filter(x=>x!=k);
+ t.reqs=(t.reqs||[]).filter(x=>x!=db.cur);t.sent=(t.sent||[]).filter(x=>x!=db.cur);
+}
+function friendsTab(u){
+ u.friends=u.friends||[];u.reqs=u.reqs||[];u.sent=u.sent||[];
+ const U=k=>db.users[k];
+ const reqs=u.reqs.filter(U),sent=u.sent.filter(U),fr=u.friends.filter(U);
+ const others=Object.keys(db.users).filter(k=>k!=db.cur&&!u.friends.includes(k)&&!u.sent.includes(k)&&!u.reqs.includes(k));
+ const board=[db.cur,...fr].sort((a,b)=>U(b).xp-U(a).xp);
+ const info=x=>`Lv ${lvl(x.xp)} · 🔥 ${streak(x.active)} · ${x.xp} XP`;
+ const line=(k,right)=>{const x=U(k);return `<li><span style="font-size:26px">${x.av}</span><div class="grow"><b>${esc(x.name)}</b><div class="mut small">${info(x)}</div></div>${right}</li>`};
+ return `<div class="card"><h3 style="margin:0 0 2px;font-size:19px">👥 Friends</h3>
+  <div class="mut small" style="margin-bottom:8px">Add friends by username and compete on the XP ladder.</div>
+  <div class="add"><input id="frName" placeholder="Friend's username" maxlength="16" autocomplete="off"></div>
+  <button class="btn" data-act="addfriend">Send friend request</button>
+  ${others.length?`<div class="mut small" style="margin-top:10px">Players on this device:</div><div class="chips">${others.map(k=>`<a data-act="ffill" data-v="${esc(U(k).name)}">${U(k).av} ${esc(U(k).name)}</a>`).join(' · ')}</div>`:''}
+  <div class="reviewer-note">Friends are accounts saved in this same browser. To befriend people on other devices, Questly would need an online database.</div></div>
+ ${reqs.length?`<div class="card"><b>📨 Friend requests</b><ul>${reqs.map(k=>line(k,`<button class="pill" data-act="facc" data-v="${k}">Accept</button><button class="ghost" data-act="fdec" data-v="${k}">Decline</button>`)).join('')}</ul></div>`:''}
+ ${sent.length?`<div class="card"><b>⏳ Sent requests</b><ul>${sent.map(k=>line(k,`<button class="ghost" data-act="fcancel" data-v="${k}">Cancel</button>`)).join('')}</ul></div>`:''}
+ <div class="card"><div class="row"><b>🏁 Friends ladder</b><span class="mut small">${fr.length} friend${fr.length==1?'':'s'}</span></div>
+  ${fr.length?`<ul>${board.map((k,i)=>{const x=U(k);return `<li class="${k==db.cur?'me':''}"><b class="rk">${['🥇','🥈','🥉'][i]||i+1}</b><span style="font-size:22px">${x.av}</span><div class="grow"><b>${esc(x.name)}${k==db.cur?' (you)':''}</b><div class="mut small">${info(x)}</div></div>${k==db.cur?'':`<button class="x" data-act="frem" data-v="${k}" title="Remove friend">×</button>`}</li>`}).join('')}</ul>`:'<div class="empty">👥<br>No friends yet.<br>Send a request above to start a rivalry!</div>'}</div>`;
+}
+
 function home(u){
  const L=lvl(u.xp),p=u.xp%100,s=streak(u.active);
  const strip=[...Array(14)].map((_,i)=>`<i class="${u.active.includes(shift(13-i))?'on':''}${i==13?' now':''}"></i>`).join('');
- const T=[['quests','⚔️ Quests'],['habits','🔥 Daily'],['reviewers','📚 Reviewers'],['stats','🏆 Stats']];
+ const T=[['quests','⚔️ Quests'],['habits','🔥 Daily'],['schedule','🗓️ Schedule'],['reviewers','📚 Reviewers'],['quiz','🃏 Quiz'],['friends','👥 Friends'+((u.reqs||[]).filter(k=>db.users[k]).length?' ('+(u.reqs||[]).filter(k=>db.users[k]).length+')':'')],['stats','🏆 Stats']];
  return `<header><b class="brand"><i>⚡</i>Questly</b><span><button class="ghost" data-act="snd" title="Sound">${db.mute?'🔇':'🔊'}</button><button class="ghost" data-act="theme" title="Theme">🌓</button>${u.av} ${esc(u.name)} <button class="ghost" data-act="out">Log out</button></span></header>
  <section class="card hero"><div class="lv" style="--p:${p}"><span>${L}</span></div><div class="grow"><div class="row"><b>Level ${L} · ${['Rookie','Explorer','Adventurer','Hero','Champion','Legend'][Math.min(L-1,5)]}</b><span class="mut">${p}/100 XP</span></div><div class="bar"><div style="width:${p}%"></div></div><div class="strip">${strip}</div></div><div class="fire"><span class="${s?'lit':''}">🔥</span><b>${s}</b><small>day streak</small></div></section>
  ${goal(u)}<nav class="tabs">${T.map(x=>`<button data-act="tab" data-v="${x[0]}" class="${tab==x[0]?'on':''}">${x[1]}</button>`).join('')}</nav>
- ${tab=='quests'?quests(u):tab=='habits'?habits(u):tab=='reviewers'?reviewers(u):stats(u)}`}
+ ${tab=='quests'?quests(u):tab=='habits'?habits(u):tab=='schedule'?schedule(u):tab=='reviewers'?reviewers(u):tab=='quiz'?quizTab(u):tab=='friends'?friendsTab(u):stats(u)}`}
 
-function render(){const u=me();$('#app').innerHTML=u?home(u):auth()}
+function render(){const u=me();$('#app').innerHTML=u?home(u):auth();const nv=$('.tabs'),on=$('.tabs .on');if(nv&&on)nv.scrollLeft=on.offsetLeft-(nv.clientWidth-on.offsetWidth)/2}
 
 function act(a,v,el){
  const u=me();
@@ -328,7 +531,7 @@ function act(a,v,el){
   if(!n||!form.pw){err='Enter a username and password.';return render()}
   if(mode=='signup'){
    if(db.users[k]){err='That username is taken.';return render()}
-   db.users[k]={name:n,pw:hash(form.pw),av:pickAv,xp:0,done:0,chk:0,best:0,active:[],tasks:[],habits:[],subjects:[]};
+   db.users[k]={name:n,pw:hash(form.pw),av:pickAv,xp:0,done:0,chk:0,best:0,active:[],tasks:[],habits:[],subjects:[],schedule:[],decks:[],friends:[],reqs:[],sent:[]};
   }else if(!db.users[k]||db.users[k].pw!==hash(form.pw)){err='Wrong username or password.';return render()}
   db.cur=k;form={un:'',pw:''};err='';tab='quests';save();render();
  }
@@ -353,6 +556,110 @@ function act(a,v,el){
   render();
   toast('Subject added! 📚');
   sfx.pop();
+ }
+ else if(a=='addclass'){
+  const n=$('#schName').value.trim(),day=+$('#schDay').value,st=$('#schStart').value,en=$('#schEnd').value,room=$('#schRoom').value.trim();
+  if(!n){toast('Enter a class name first.');$('#schName').focus();return}
+  if(!st||!en){toast('Pick a start and end time.');return}
+  if(en<=st){toast('End time must be after the start time.');return}
+  u.schedule=u.schedule||[];
+  u.schedule.push({id:Date.now(),name:n,day,start:st,end:en,room});
+  schDay=day;schS=st;schE=en;
+  save();render();toast('Class added! 🗓️');sfx.pop();
+ }
+ else if(a=='cdel'){u.schedule=(u.schedule||[]).filter(c=>c.id!=v);save();render()}
+ else if(a=='sdel'){u.subjects=(u.subjects||[]).filter(x=>x.id!=v);save();render()}
+ else if(a=='fdel'){const[sid,fid]=v.split(':'),sb=(u.subjects||[]).find(x=>x.id==sid);if(sb){sb.files=(sb.files||[]).filter(f=>f.id!=fid);save();render()}}
+ else if(a=='adddeck'){
+  const n=$('#deckName').value.trim();
+  if(!n){toast('Enter a deck name first.');$('#deckName').focus();return}
+  u.decks=u.decks||[];
+  const d={id:Date.now(),name:n,cards:[]};
+  u.decks.unshift(d);qz={view:'edit',deck:d.id};
+  save();render();toast('Deck created! Add your first cards 🃏');sfx.pop();
+  const q=$('#qzQ');if(q)q.focus();
+ }
+ else if(a=='ddel'){if(confirm('Delete this deck and all its cards?')){u.decks=(u.decks||[]).filter(d=>d.id!=v);save();render()}}
+ else if(a=='qopen'){qz={view:'edit',deck:+v};render()}
+ else if(a=='qlist'||a=='qexit'){qz={view:'list'};render()}
+ else if(a=='addcard'){
+  const d=deckOf(u),q=$('#qzQ'),an=$('#qzA');if(!d)return;
+  if(!q.value.trim()||!an.value.trim()){toast('Fill in both sides of the card.');(q.value.trim()?an:q).focus();return}
+  d.cards.push({id:Date.now(),q:q.value.trim(),a:an.value.trim(),k:false});
+  save();render();sfx.pop();$('#qzQ').focus();
+ }
+ else if(a=='bulk'){
+  const d=deckOf(u),ta=$('#qzBulk');if(!d||!ta)return;
+  let n=0;
+  ta.value.split(/\r?\n/).forEach(line=>{
+   const m=line.split(/::|\t/);if(m.length<2)return;
+   const q=m[0].trim(),an=m.slice(1).join('::').trim();
+   if(q&&an){d.cards.push({id:Date.now()+n,q,a:an,k:false});n++}
+  });
+  if(!n){toast('Use the format: question :: answer (one per line).');return}
+  save();render();toast(n+' card'+(n>1?'s':'')+' imported! 🃏');sfx.ok();
+ }
+ else if(a=='kdel'){const d=deckOf(u);if(d){d.cards=d.cards.filter(c=>c.id!=v);save();render()}}
+ else if(a=='qflash'){qzStart(u,+v,'flash');render()}
+ else if(a=='qquiz'){qzStart(u,+v,'quiz');render()}
+ else if(a=='qrestart'){qzStart(u,qz.deck,qz.mode);render()}
+ else if(a=='qmissed'){qzStart(u,qz.deck,'flash',qz.missed.slice());render()}
+ else if(a=='qflip'){if(el){el.classList.toggle('flipped');sfx.pop()}}
+ else if(a=='qgot'){
+  const d=deckOf(u);if(!d||qz.done||qz.mode!='flash')return;
+  const id=qz.queue.shift(),c=d.cards.find(x=>x.id==id);
+  if(c)c.k=true;
+  qz.right++;
+  if(!qz.queue.length)qzFinish(u);else sfx.ok();
+  save();render();
+ }
+ else if(a=='qagain'){
+  const d=deckOf(u);if(!d||qz.done||qz.mode!='flash')return;
+  const id=qz.queue.shift(),c=d.cards.find(x=>x.id==id);
+  if(c)c.k=false;
+  qz.queue.push(id);qz.wrong++;
+  if(!qz.missed.includes(id))qz.missed.push(id);
+  sfx.pop();save();render();
+ }
+ else if(a=='qpick'){
+  const d=deckOf(u);if(!d||qz.done||qz.mode!='quiz'||qz.pick!=null)return;
+  const i=+v,c=d.cards.find(x=>x.id==qz.queue[0]);
+  if(!c||qz.opts[i]===undefined)return;
+  qz.pick=i;
+  const ok=qz.opts[i]===c.a;
+  c.k=ok;
+  if(ok){qz.right++;sfx.ok()}else{qz.wrong++;if(!qz.missed.includes(c.id))qz.missed.push(c.id);sfx.pop()}
+  save();render();
+ }
+ else if(a=='qnext'){
+  if(qz.done||qz.pick==null)return;
+  qz.queue.shift();
+  if(!qz.queue.length)qzFinish(u);else qzSetOpts(u);
+  save();render();
+ }
+ else if(a=='ffill'){const i=$('#frName');if(i){i.value=v;i.focus()}}
+ else if(a=='addfriend'){
+  const k=($('#frName').value||'').trim().toLowerCase();
+  u.friends=u.friends||[];u.reqs=u.reqs||[];u.sent=u.sent||[];
+  if(!k){toast('Enter a username first.');return}
+  if(k==db.cur){toast("That's you! 😄");return}
+  const t=db.users[k];
+  if(!t){toast('No player with that username on this device.');return}
+  if(u.friends.includes(k)){toast('You are already friends!');return}
+  if(u.sent.includes(k)){toast('Request already sent.');return}
+  if(u.reqs.includes(k)){befriend(u,k);save();render();toast('You are now friends with '+t.name+'! 🤝');sfx.ok();return}
+  t.reqs=t.reqs||[];if(!t.reqs.includes(db.cur))t.reqs.push(db.cur);
+  u.sent.push(k);save();render();toast('Friend request sent to '+t.name+'! 📨');sfx.pop();
+ }
+ else if(a=='facc'){const t=db.users[v];if(!t)return;befriend(u,v);save();render();toast('You are now friends with '+t.name+'! 🤝');sfx.ok();confetti(innerWidth/2,innerHeight/3,60)}
+ else if(a=='fdec'){const t=db.users[v];u.reqs=(u.reqs||[]).filter(x=>x!=v);if(t)t.sent=(t.sent||[]).filter(x=>x!=db.cur);save();render()}
+ else if(a=='fcancel'){const t=db.users[v];u.sent=(u.sent||[]).filter(x=>x!=v);if(t)t.reqs=(t.reqs||[]).filter(x=>x!=db.cur);save();render()}
+ else if(a=='frem'){
+  const t=db.users[v];
+  if(!confirm('Remove '+(t?t.name:'this friend')+' from your friends?'))return;
+  u.friends=(u.friends||[]).filter(x=>x!=v);
+  if(t)t.friends=(t.friends||[]).filter(x=>x!=db.cur);
+  save();render();
  }
  else if(a=='addq'){const t=$('#qt').value.trim();if(!t)return;u.tasks.unshift({id:Date.now(),t,d:+$('#qd').value,done:false});save();render();sfx.pop();$('#qt').focus()}
  else if(a=='qdone'){const q=u.tasks.find(x=>x.id==v);if(q&&!q.done){q.done=true;u.done++;award(u,q.d,'quest complete!',el);save();render()}}
@@ -393,7 +700,7 @@ document.addEventListener('input',e=>{
   }
 });
 
-document.addEventListener('keydown',e=>{if(e.key!='Enter')return;const m={un:'go',pw:'go',qt:'addq',ht:'addh',subjectName:'addsubject'}[e.target.id];if(m)act(m)});
+document.addEventListener('keydown',e=>{if(e.key!='Enter')return;if(e.target.id=='qzQ'){const n=$('#qzA');if(n)n.focus();return}const m={un:'go',pw:'go',qt:'addq',ht:'addh',subjectName:'addsubject',schName:'addclass',deckName:'adddeck',qzA:'addcard',frName:'addfriend'}[e.target.id];if(m)act(m)});
 
 /* ===== Background Motion ===== */
 (function(){
@@ -435,6 +742,57 @@ document.addEventListener('keydown',e=>{if(e.key!='Enter')return;const m={un:'go
   resize();window.addEventListener('resize',resize,{passive:true});
   if(!reduce)draw();
 })();
+
+/* ===== Study keyboard shortcuts ===== */
+document.addEventListener('keydown',e=>{
+  if(qz.view!='study'||qz.done||!me())return;
+  if(/^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(e.target.tagName))return;
+  if(qz.mode=='flash'){
+    if(e.key==' '){e.preventDefault();const f=document.querySelector('.fc');if(f)act('qflip',null,f)}
+    else if(e.key=='ArrowRight')act('qgot');
+    else if(e.key=='ArrowLeft')act('qagain');
+  }else{
+    if(e.key>='1'&&e.key<='4')act('qpick',String(+e.key-1));
+    else if((e.key=='Enter'||e.key=='ArrowRight')&&qz.pick!=null)act('qnext');
+  }
+});
+
+/* ===== Logo for home-screen icon (iOS/Android) ===== */
+(function(){
+  try{
+    const c=document.createElement('canvas');c.width=c.height=180;
+    const g=c.getContext('2d'),k=180/64;
+    const rr=(x,y,w,h,r,col)=>{g.fillStyle=col;g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();g.fill()};
+    g.fillStyle='#ffc933';g.fillRect(0,0,180,180);
+    rr(0,0,180,180,0,'#ffc933');
+    g.fillStyle='#0f1a44';g.beginPath();
+    [[37,8],[17,34],[29,34],[25,52],[47,25],[35,25]].forEach((p,i)=>i?g.lineTo(p[0]*k,(p[1]+3)*k):g.moveTo(p[0]*k,(p[1]+3)*k));
+    g.closePath();g.fill();
+    const l=document.createElement('link');l.rel='apple-touch-icon';l.href=c.toDataURL('image/png');document.head.appendChild(l);
+  }catch(e){}
+})();
+
+/* ===== Click pop animation ===== */
+function clickPop(x,y){
+  const colors=['#ffc933','#2f5bff','#6a8dff','#ffd75e','#ffffff'];
+  const add=(cls,tag)=>{const n=document.createElement(tag||'div');n.className=cls;n.style.left=x+'px';n.style.top=y+'px';document.body.appendChild(n);setTimeout(()=>n.remove(),800);return n};
+  add('clk-ring');
+  const N=8;
+  for(let i=0;i<N;i++){
+    const a=(Math.PI*2/N)*i+Math.random()*.5,d=26+Math.random()*26;
+    const dot=add('clk-dot');
+    dot.style.setProperty('--dx',Math.cos(a)*d+'px');
+    dot.style.setProperty('--dy',Math.sin(a)*d+'px');
+    dot.style.setProperty('--c',colors[i%colors.length]);
+  }
+  const star=add('clk-star');
+  star.textContent=['⭐','✨','⚡','🌟'][Math.floor(Math.random()*4)];
+}
+document.addEventListener('pointerdown',e=>{
+  if(e.button>0)return;
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  clickPop(e.clientX,e.clientY);
+},{passive:true});
 
 applyTheme();render();
 </script>
