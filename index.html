@@ -218,6 +218,16 @@ textarea:focus{outline:none;border-color:var(--blue)}
 .donebox{text-align:center;padding:10px 0}
 .donebox h2{margin:6px 0;font-size:30px;color:var(--blue)}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+/* ===== Online + focus ===== */
+.rules{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px;font-size:11px;overflow:auto;max-height:240px;white-space:pre;margin:8px 0}
+.ft{text-align:center}
+.ft-ring{position:relative;width:220px;height:220px;margin:14px auto;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--blue) calc(var(--p)*1%),var(--line) 0);transition:background .4s}
+.ft-ring::before{content:'';position:absolute;inset:14px;border-radius:50%;background:var(--card)}
+.ft-ring span{position:relative;font-size:46px;font-weight:700;font-variant-numeric:tabular-nums}
+.ft-pre{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:8px 0 12px}
+.ftp.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.ftp:disabled{opacity:.5;cursor:default}
+details summary{outline:none}
 </style>
 </head>
 <body>
@@ -230,7 +240,7 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db={users:{},cur:null};
 try{const r=localStorage.getItem('questly');if(r)db=JSON.parse(r)}catch(e){}
-const save=()=>{try{localStorage.setItem('questly',JSON.stringify(db))}catch(e){}};
+const save=()=>{try{localStorage.setItem('questly',JSON.stringify(db))}catch(e){}try{cloudQueue()}catch(e){}};
 const dstr=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');
 const shift=n=>{const d=new Date();d.setDate(d.getDate()-n);return dstr(d)};
 const today=()=>shift(0);
@@ -238,7 +248,7 @@ const streak=a=>{const s=new Set(a);let i=s.has(shift(0))?0:1,n=0;while(s.has(sh
 const hash=s=>{let h=5381;for(const c of s)h=((h<<5)+h+c.charCodeAt(0))>>>0;return h.toString(36)};
 const lvl=xp=>Math.floor(xp/100)+1;
 const AV=['🦊','🐼','🐸','🦁','🐙','🦉','🐲','🚀'];
-const BG=[['🗡️','First Quest',u=>u.done>=1],['⚔️','10 Quests',u=>u.done>=10],['🔥','3-Day Streak',u=>u.best>=3],['🌟','7-Day Streak',u=>u.best>=7],['👑','30-Day Streak',u=>u.best>=30],['🛡️','Level 5',u=>lvl(u.xp)>=5],['💯','50 Check-ins',u=>u.chk>=50],['🤝','First Friend',u=>(u.friends||[]).length>=1],['🧠','Study Session',u=>(u.studied||0)>=1]];
+const BG=[['🗡️','First Quest',u=>u.done>=1],['⚔️','10 Quests',u=>u.done>=10],['🔥','3-Day Streak',u=>u.best>=3],['🌟','7-Day Streak',u=>u.best>=7],['👑','30-Day Streak',u=>u.best>=30],['🛡️','Level 5',u=>lvl(u.xp)>=5],['💯','50 Check-ins',u=>u.chk>=50],['🤝','First Friend',u=>(u.friends||[]).length>=1||(u.onlineFriends||0)>=1],['⏱️','Deep Focus',u=>(u.focus||0)>=60],['🧠','Study Session',u=>(u.studied||0)>=1]];
 let tab='quests',mode='signup',pickAv='🦊',err='',form={un:'',pw:''};
 const me=()=>db.cur&&db.users[db.cur];
 
@@ -490,7 +500,7 @@ function befriend(u,k){
  u.reqs=(u.reqs||[]).filter(x=>x!=k);u.sent=(u.sent||[]).filter(x=>x!=k);
  t.reqs=(t.reqs||[]).filter(x=>x!=db.cur);t.sent=(t.sent||[]).filter(x=>x!=db.cur);
 }
-function friendsTab(u){
+function friendsLocal(u){
  u.friends=u.friends||[];u.reqs=u.reqs||[];u.sent=u.sent||[];
  const U=k=>db.users[k];
  const reqs=u.reqs.filter(U),sent=u.sent.filter(U),fr=u.friends.filter(U);
@@ -510,14 +520,293 @@ function friendsTab(u){
   ${fr.length?`<ul>${board.map((k,i)=>{const x=U(k);return `<li class="${k==db.cur?'me':''}"><b class="rk">${['🥇','🥈','🥉'][i]||i+1}</b><span style="font-size:22px">${x.av}</span><div class="grow"><b>${esc(x.name)}${k==db.cur?' (you)':''}</b><div class="mut small">${info(x)}</div></div>${k==db.cur?'':`<button class="x" data-act="frem" data-v="${k}" title="Remove friend">×</button>`}</li>`}).join('')}</ul>`:'<div class="empty">👥<br>No friends yet.<br>Send a request above to start a rivalry!</div>'}</div>`;
 }
 
+/* ===== Online database: Firebase Auth + Realtime Database over REST ===== */
+// Optional: paste your Firebase details here to pre-connect every device, or enter them inside the app (Friends tab).
+const CLOUD_DEFAULT={apiKey:'AIzaSyDkEQj4pfxgepSL9ncugmXUygfDwA17NAw',databaseURL:'https://questly-database-default-rtdb.asia-southeast1.firebasedatabase.app'};
+const TITLE0=document.title;
+const N=x=>Number(x)||0;
+const okKey=k=>/^[\w-]{1,40}$/.test(String(k));
+const ckey=n=>String(n).toLowerCase().replace(/[^a-z0-9_-]/g,'_').slice(0,40)||'_';
+const cfg=()=>{const c=db.cloud||{};return{apiKey:c.apiKey||CLOUD_DEFAULT.apiKey,url:String(c.url||CLOUD_DEFAULT.databaseURL||'').replace(/\/+$/,'')}};
+const cloudReady=()=>{const c=cfg();return!!(c.apiKey&&c.url)};
+const newCF=()=>({friends:[],reqs:[],sent:[],cheers:[],board:[],busy:false,err:'',last:0,seen:null,boardErr:''});
+let CS={},CF=newCF();
+const own=k=>"root.child('profiles').child("+k+").child('uid').val() === auth.uid";
+const RULES=JSON.stringify({rules:{
+ profiles:{'.read':'auth != null','.indexOn':['xp'],'$u':{'.write':"auth != null && (!data.exists() ? newData.child('uid').val() === auth.uid : data.child('uid').val() === auth.uid)",'.validate':"newData.hasChildren(['uid','name','xp'])"}},
+ userdata:{'$uid':{'.read':'auth != null && auth.uid === $uid','.write':'auth != null && auth.uid === $uid'}},
+ friends:{'.read':'auth != null','$u':{'$o':{'.write':'auth != null && ('+own('$u')+' || ('+own('$o')+" && (!newData.exists() || root.child('requests').child($o).child($u).exists())))"}}},
+ requests:{'$to':{'.read':'auth != null && '+own('$to'),'$from':{'.read':'auth != null && '+own('$from'),'.write':'auth != null && ('+own('$from')+' || '+own('$to')+')'}}},
+ outbox:{'$from':{'.read':'auth != null && '+own('$from'),'$to':{'.write':'auth != null && ('+own('$from')+' || ('+own('$to')+' && !newData.exists()))'}}},
+ cheers:{'$to':{'.read':'auth != null && '+own('$to'),'.write':'auth != null && !newData.exists() && '+own('$to'),'$id':{'.write':'auth != null && ((!newData.exists() && '+own('$to')+") || (root.child('profiles').child(newData.child('from').val()).child('uid').val() === auth.uid && root.child('friends').child($to).child(newData.child('from').val()).exists()))",'.validate':"newData.child('emoji').val().length < 9"}}}
+}},null,2);
+
+async function jfetch(url,opt){
+ const r=await fetch(url,opt);let j=null;
+ try{j=await r.json()}catch(e){}
+ if(!r.ok)throw new Error((j&&((j.error&&j.error.message)||(typeof j.error=='string'&&j.error)))||('HTTP '+r.status));
+ return j;
+}
+function cloudMsg(e){
+ const m=String((e&&e.message)||e);
+ if(/WEAK_PASSWORD/.test(m))return 'Online accounts need a password of at least 6 characters.';
+ if(/Permission denied/i.test(m))return 'Permission denied. Check that you published the database rules from the setup guide.';
+ if(/API key not valid|API_KEY_INVALID|INVALID_API_KEY/i.test(m))return 'That Firebase API key is not valid.';
+ if(/OPERATION_NOT_ALLOWED|CONFIGURATION_NOT_FOUND/.test(m))return 'Enable Email/Password sign-in in Firebase Authentication.';
+ if(/TOO_MANY_ATTEMPTS/.test(m))return 'Too many attempts. Try again in a few minutes.';
+ if(/Failed to fetch|NetworkError|Load failed/i.test(m))return 'Cannot reach Firebase. Check your internet and Database URL.';
+ if(/Index not defined/i.test(m))return 'Add the ".indexOn" rule from the setup guide for the global leaderboard.';
+ if(m=='NOT_ONLINE')return 'You are not signed in online.';
+ return m;
+}
+async function tok(){
+ if(CS.id&&Date.now()<CS.exp-60000)return CS.id;
+ const u=me(),rt=CS.rt||(u&&u.cloud&&u.cloud.rt);
+ if(!rt)throw new Error('NOT_ONLINE');
+ const j=await jfetch('https://securetoken.googleapis.com/v1/token?key='+encodeURIComponent(cfg().apiKey),{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'grant_type=refresh_token&refresh_token='+encodeURIComponent(rt)});
+ CS={id:j.id_token,rt:j.refresh_token,uid:j.user_id,exp:Date.now()+N(j.expires_in)*1000};
+ if(u&&u.cloud){u.cloud.rt=CS.rt;try{localStorage.setItem('questly',JSON.stringify(db))}catch(e){}}
+ return CS.id;
+}
+async function dbx(method,path,body,q){
+ const t=await tok();
+ const url=cfg().url+'/'+path+'.json?auth='+encodeURIComponent(t)+(q?'&'+q:'');
+ return jfetch(url,{method,body:body===undefined||body===null?undefined:JSON.stringify(body)});
+}
+async function goOnline(u,pw){
+ const c=cfg(),email=ckey(db.cur)+'@questly.app';
+ const call=ep=>jfetch('https://identitytoolkit.googleapis.com/v1/accounts:'+ep+'?key='+encodeURIComponent(c.apiKey),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pw,returnSecureToken:true})});
+ let j;
+ try{j=await call('signInWithPassword')}
+ catch(e){
+  if(/EMAIL_NOT_FOUND|INVALID_LOGIN_CREDENTIALS|INVALID_PASSWORD/.test(e.message)){
+   try{j=await call('signUp')}
+   catch(e2){if(/EMAIL_EXISTS/.test(e2.message))throw new Error('That username already exists online with a different password.');throw e2}
+  }else throw e;
+ }
+ CS={id:j.idToken,rt:j.refreshToken,uid:j.localId,exp:Date.now()+N(j.expiresIn)*1000};
+ u.cloud={rt:CS.rt,uid:CS.uid,key:ckey(db.cur)};
+}
+const pubOf=u=>({uid:CS.uid,name:u.name,av:u.av,xp:u.xp,lv:lvl(u.xp),st:streak(u.active),best:u.best,done:u.done,bg:BG.filter(b=>b[2](u)).length,upd:Date.now()});
+const pushProfile=u=>dbx('PUT','profiles/'+u.cloud.key,pubOf(u));
+async function pushBackup(u){
+ const b=JSON.parse(JSON.stringify(u));
+ ['pw','cloud','subjects','friends','reqs','sent'].forEach(k=>delete b[k]);
+ const body={upd:Date.now(),data:b};
+ if(JSON.stringify(body).length>3e6)return;
+ await dbx('PUT','userdata/'+CS.uid,body);
+}
+function fixUser(u){
+ ['tasks','habits','active','schedule','decks','subjects','friends','reqs','sent'].forEach(k=>{let v=u[k];if(v&&!Array.isArray(v)&&typeof v=='object')v=Object.values(v);u[k]=Array.isArray(v)?v.filter(x=>x!=null):[]});
+ u.decks.forEach(d=>{let c=d.cards;if(c&&!Array.isArray(c))c=Object.values(c);d.cards=(c||[]).filter(Boolean)});
+}
+function restoreFrom(u,d){
+ const keep={pw:u.pw,cloud:u.cloud,subjects:u.subjects};
+ Object.keys(u).forEach(k=>delete u[k]);
+ Object.assign(u,d,keep);fixUser(u);
+}
+async function cloudConnect(u,pw,silent){
+ if(!cloudReady())return;
+ if(!silent)toast('Connecting… ☁️');
+ try{
+  await goOnline(u,pw);
+  const bk=await dbx('GET','userdata/'+CS.uid);
+  const cx=bk&&bk.data?N(bk.data.xp):0;
+  if(cx>u.xp&&confirm('Found your online save (Level '+lvl(cx)+', '+cx+' XP), which is ahead of this device. Load it?')){restoreFrom(u,bk.data);toast('Online save loaded! 📥')}
+  else{await pushBackup(u);toast('You are online! ☁️')}
+  await pushProfile(u);
+  save();render();sfx.ok();
+  cloudSync(u);
+ }catch(e){toast(cloudMsg(e));render()}
+}
+let cq=0;
+function cloudQueue(){
+ const u=me();
+ if(!u||!u.cloud||!cloudReady())return;
+ clearTimeout(cq);
+ cq=setTimeout(async()=>{try{await tok();await pushProfile(u);await pushBackup(u)}catch(e){CF.err=cloudMsg(e)}},4000);
+}
+const cleanProf=(k,p)=>({key:k,name:String(p&&p.name||k).slice(0,20),av:AV.includes(p&&p.av)?p.av:'🙂',xp:N(p&&p.xp),lv:Math.max(1,N(p&&p.lv)),st:N(p&&p.st),upd:N(p&&p.upd)});
+const ago=t=>{if(!t)return '—';const s=(Date.now()-t)/1000;return s<300?'🟢 online':s<3600?Math.floor(s/60)+'m ago':s<86400?Math.floor(s/3600)+'h ago':Math.floor(s/86400)+'d ago'};
+async function cloudSync(u,manual){
+ if(!u||!u.cloud||!cloudReady()||CF.busy)return;
+ CF.busy=true;
+ const key=u.cloud.key,prevReq=CF.reqs.length;
+ try{
+  await tok();
+  const [fr,rq,ob,ch]=await Promise.all([dbx('GET','friends/'+key),dbx('GET','requests/'+key),dbx('GET','outbox/'+key),dbx('GET','cheers/'+key)]);
+  const keys=o=>Object.keys(o||{}).filter(okKey);
+  const fk=keys(fr).filter(k=>fr[k]),rk=keys(rq),ok0=keys(ob),still=[];
+  await Promise.all(ok0.map(async k=>{
+   if(fk.includes(k)){dbx('DELETE','outbox/'+key+'/'+k).catch(()=>{});return}
+   const r=await dbx('GET','requests/'+k+'/'+key).catch(()=>1);
+   if(r)still.push(k);else dbx('DELETE','outbox/'+key+'/'+k).catch(()=>{});
+  }));
+  const P={};
+  await Promise.all([...new Set([...fk,...rk,...still])].map(async k=>{try{const p=await dbx('GET','profiles/'+k);if(p)P[k]=cleanProf(k,p)}catch(e){}}));
+  CF.friends=fk.filter(k=>P[k]).map(k=>P[k]).sort((a,b)=>b.xp-a.xp);
+  CF.reqs=rk.filter(k=>P[k]).map(k=>P[k]);
+  CF.sent=still.filter(k=>P[k]).map(k=>P[k]);
+  u.onlineFriends=CF.friends.length;
+  const E=['👏','🔥','💪','🎉'];
+  const cs=Object.entries(ch||{}).filter(([id,c])=>c&&typeof c=='object').map(([id,c])=>({id,name:String(c.name||'Someone').slice(0,20),emoji:E.includes(c.emoji)?c.emoji:'👏',ts:N(c.ts)})).sort((a,b)=>b.ts-a.ts).slice(0,8);
+  const fresh=CF.seen?cs.filter(c=>!CF.seen.has(c.id)):[];
+  CF.seen=new Set(cs.map(c=>c.id));CF.cheers=cs;
+  if(fresh.length){toast(fresh[0].emoji+' '+fresh[0].name+' sent you a cheer!');sfx.ok()}
+  if(CF.last&&CF.reqs.length>prevReq)toast('📨 New friend request!');
+  if(tab=='friends'){
+   try{const b=await dbx('GET','profiles',null,'orderBy=%22xp%22&limitToLast=10');CF.board=Object.keys(b||{}).filter(okKey).map(k=>cleanProf(k,b[k])).sort((a,b)=>b.xp-a.xp);CF.boardErr=''}
+   catch(e){CF.board=[];CF.boardErr=cloudMsg(e)}
+  }
+  CF.err='';
+ }catch(e){CF.err=cloudMsg(e)}
+ CF.busy=false;CF.last=Date.now();
+ const ae=document.activeElement;
+ if(!(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))&&(tab=='friends'||CF.reqs.length!=prevReq||manual))render();
+ if(manual&&!CF.err)toast('Synced ✅');
+}
+async function cloudAdd(u){
+ const inp=$('#frName'),raw=(inp&&inp.value||'').trim();
+ if(!raw){toast('Enter a username first.');return}
+ const k=ckey(raw),mk=u.cloud.key;
+ if(k==mk){toast("That's you! 😄");return}
+ try{
+  const p=await dbx('GET','profiles/'+k);
+  if(!p){toast('No online player named "'+raw+'". They need to log in once while online.');return}
+  if(CF.friends.some(f=>f.key==k)){toast('You are already friends!');return}
+  const theirs=await dbx('GET','requests/'+mk+'/'+k);
+  if(theirs){await cloudAccept(u,k);return}
+  await dbx('PATCH','',{['requests/'+k+'/'+mk]:{ts:Date.now(),name:u.name},['outbox/'+mk+'/'+k]:true});
+  toast('Friend request sent to '+String(p.name||raw).slice(0,20)+'! 📨');sfx.pop();
+  if(inp)inp.value='';
+  await cloudSync(u);
+ }catch(e){toast(cloudMsg(e))}
+}
+async function cloudAccept(u,k){
+ const mk=u.cloud.key;
+ try{
+  await dbx('PATCH','',{['friends/'+mk+'/'+k]:true,['friends/'+k+'/'+mk]:true,['requests/'+mk+'/'+k]:null,['outbox/'+k+'/'+mk]:null});
+  toast('You are now friends! 🤝');sfx.ok();confetti(innerWidth/2,innerHeight/3,70);
+  await cloudSync(u);save();render();
+ }catch(e){toast(cloudMsg(e))}
+}
+async function cloudDrop(u,paths,msg){
+ try{await dbx('PATCH','',paths);toast(msg);await cloudSync(u)}catch(e){toast(cloudMsg(e))}
+}
+async function cloudCheer(u,k,emoji){
+ if(!['👏','🔥','💪','🎉'].includes(emoji))return;
+ if(Date.now()-(cloudCheer.t||0)<2500){toast('Easy there, champ 😄');return}
+ cloudCheer.t=Date.now();
+ try{await dbx('POST','cheers/'+k,{from:u.cloud.key,name:u.name,emoji,ts:Date.now()});toast('Cheer sent '+emoji);sfx.pop()}
+ catch(e){toast(cloudMsg(e))}
+}
+function cloudCard(u){
+ let body;
+ if(!cloudReady())body=`<div class="mut small" style="margin-bottom:8px">Connect a free Firebase database to add friends on any device, back up your progress, and join a global leaderboard.</div><input id="cfgKey" placeholder="Firebase Web API key" autocomplete="off"><input id="cfgUrl" placeholder="Database URL (https://...firebaseio.com)" autocomplete="off"><button class="btn" data-act="cfgsave">Save connection</button>`;
+ else if(!u.cloud)body=`<div class="mut small" style="margin-bottom:8px">Sign in online with your Questly password. It goes straight to Firebase Authentication and is never stored by Questly.</div><input id="cloudPw" type="password" placeholder="Your password" autocomplete="current-password"><button class="btn" data-act="cgo">Go online ☁️</button><div style="margin-top:8px"><a data-act="cfgreset">Change database</a></div>${CF.err?`<div class="reviewer-note">⚠️ ${esc(CF.err)}</div>`:''}`;
+ else body=`<div class="row"><b>🟢 Online as ${esc(u.cloud.key)}</b><span class="mut small">${CF.busy?'syncing…':CF.last?'synced '+Math.max(0,Math.round((Date.now()-CF.last)/1000))+'s ago':''}</span></div>${CF.err?`<div class="reviewer-note" style="color:#e5484d">⚠️ ${esc(CF.err)}</div>`:''}<div class="deck-btns"><button class="pill" data-act="csync">🔄 Sync now</button><button class="ghost" data-act="cdis">Disconnect</button><button class="ghost" data-act="cfgreset">Change database</button></div><div class="reviewer-note">Your XP, quests, habits, schedule and quiz decks are backed up automatically. Reviewer files stay on this device.</div>`;
+ return `<div class="card nofloat"><h3 style="margin:0 0 6px;font-size:19px">☁️ Online Database</h3>${body}
+ <details style="margin-top:12px"><summary class="mut small" style="cursor:pointer">Setup guide (5 minutes, free)</summary>
+  <ol class="small" style="padding-left:20px;line-height:1.7">
+   <li>Go to <b>console.firebase.google.com</b> → <b>Add project</b>.</li>
+   <li><b>Build → Authentication</b> → Get started → enable <b>Email/Password</b>.</li>
+   <li><b>Build → Realtime Database</b> → Create database.</li>
+   <li>Open its <b>Rules</b> tab, paste the rules below, press <b>Publish</b>.</li>
+   <li>Copy the <b>Database URL</b> (Data tab) and the <b>Web API Key</b> (Project settings ⚙️ → General) into the boxes above.</li>
+  </ol>
+  <pre class="rules">${esc(RULES)}</pre><button class="ghost" data-act="copyrules">📋 Copy rules</button></details></div>`;
+}
+function onlineFriends(u){
+ const info=p=>`Lv ${p.lv} · 🔥 ${p.st} · ${p.xp} XP`;
+ const E=['👏','🔥','💪','🎉'];
+ const mine={key:u.cloud.key,name:u.name,av:u.av,xp:u.xp,lv:lvl(u.xp),st:streak(u.active),upd:Date.now()};
+ const simple=(p,right)=>`<li><span style="font-size:26px">${p.av}</span><div class="grow"><b>${esc(p.name)}</b><div class="mut small">${info(p)}</div></div>${right}</li>`;
+ const rank=(list,you)=>`<ul>${list.map((p,i)=>`<li class="${p.key==you?'me':''}"><b class="rk">${['🥇','🥈','🥉'][i]||i+1}</b><span style="font-size:22px">${p.av}</span><div class="grow"><b>${esc(p.name)}${p.key==you?' (you)':''}</b><div class="mut small">${info(p)}</div></div></li>`).join('')}</ul>`;
+ const board=[mine,...CF.friends].sort((a,b)=>b.xp-a.xp);
+ return `<div class="card nofloat"><b>➕ Add a friend</b><div class="add"><input id="frName" placeholder="Friend's username" maxlength="16" autocomplete="off"></div><button class="btn" data-act="addfriend">Send friend request</button></div>
+ ${CF.reqs.length?`<div class="card nofloat"><b>📨 Friend requests</b><ul>${CF.reqs.map(p=>simple(p,`<button class="pill" data-act="cacc" data-v="${esc(p.key)}">Accept</button><button class="ghost" data-act="cdec" data-v="${esc(p.key)}">Decline</button>`)).join('')}</ul></div>`:''}
+ ${CF.sent.length?`<div class="card nofloat"><b>⏳ Sent requests</b><ul>${CF.sent.map(p=>simple(p,`<button class="ghost" data-act="ccan" data-v="${esc(p.key)}">Cancel</button>`)).join('')}</ul></div>`:''}
+ ${CF.cheers.length?`<div class="card nofloat"><div class="row"><b>💌 Cheers for you</b><a data-act="cclear">Clear</a></div><div class="chips" style="margin-top:8px">${CF.cheers.map(c=>`<span class="xp">${c.emoji} ${esc(c.name)}</span>`).join(' ')}</div></div>`:''}
+ <div class="card nofloat"><div class="row"><b>🏁 Friends ladder</b><span class="mut small">${CF.friends.length} friend${CF.friends.length==1?'':'s'}</span></div>
+  ${CF.friends.length?rank(board,mine.key)+`<div class="mut small" style="margin-top:8px">Send a cheer:</div><ul>${CF.friends.map(p=>`<li><span style="font-size:22px">${p.av}</span><div class="grow"><b>${esc(p.name)}</b><div class="mut small">${ago(p.upd)}</div><div class="chips">${E.map(e=>`<button class="ghost" data-act="cheer" data-v="${esc(p.key)}|${e}">${e}</button>`).join('')}</div></div><button class="x" data-act="crem" data-v="${esc(p.key)}" title="Remove friend">×</button></li>`).join('')}</ul>`:`<div class="empty">👥<br>${CF.last?'No friends yet.<br>Send a request above to start a rivalry!':'Loading your friends…'}</div>`}</div>
+ <div class="card nofloat"><b>🌍 Global top 10</b>${CF.board.length?rank(CF.board,mine.key):`<div class="empty">${CF.boardErr?esc(CF.boardErr):CF.last?'No players yet.':'Loading…'}</div>`}</div>`;
+}
+function friendsTab(u){
+ return cloudCard(u)+(u.cloud&&cloudReady()?onlineFriends(u):friendsLocal(u));
+}
+
+/* ===== Focus timer (pomodoro) ===== */
+let FT={len:25,end:0,run:false,t:0};
+function ftTick(){
+ const left=Math.max(0,FT.end-Date.now()),m=Math.floor(left/60000),s=Math.floor(left%60000/1000);
+ const txt=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+ const tt=$('#ftTime'),rg=$('#ftRing');
+ if(tt)tt.textContent=txt;
+ if(rg)rg.style.setProperty('--p',100-left/(FT.len*60000)*100);
+ document.title=txt+' · Questly';
+ if(left<=0)ftDone();
+}
+function ftStart(){
+ if(FT.run)return;
+ FT.run=true;FT.end=Date.now()+FT.len*60000;
+ clearInterval(FT.t);FT.t=setInterval(ftTick,500);
+ sfx.pop();render();ftTick();
+}
+function ftCancel(){
+ clearInterval(FT.t);FT.run=false;document.title=TITLE0;
+ toast('Focus session cancelled.');render();
+}
+function ftDone(){
+ clearInterval(FT.t);FT.run=false;document.title=TITLE0;
+ const u=me();
+ if(u){
+  const xp=Math.round(FT.len*1.2);
+  u.focus=(u.focus||0)+FT.len;
+  sfx.up();confetti(innerWidth/2,innerHeight/3,100);
+  award(u,xp,'· focus session ⏱️',null);
+  save();
+ }
+ render();
+}
+function focusTab(u){
+ const left=FT.run?Math.max(0,FT.end-Date.now()):FT.len*60000;
+ const m=Math.floor(left/60000),s=Math.floor(left%60000/1000);
+ const pct=FT.run?100-left/(FT.len*60000)*100:0;
+ return `<div class="card nofloat ft"><h3 style="margin:0 0 2px;font-size:19px">⏱️ Focus Timer</h3>
+  <div class="mut small">Stay on task. Finish a session to earn XP (about 1.2 XP per minute).</div>
+  <div class="ft-ring" id="ftRing" style="--p:${pct}"><span id="ftTime">${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}</span></div>
+  <div class="ft-pre">${[15,25,45,60].map(n=>`<button class="ghost ftp ${FT.len==n?'on':''}" data-act="ftlen" data-v="${n}" ${FT.run?'disabled':''}>${n} min</button>`).join('')}</div>
+  ${FT.run?'<button class="btn again" data-act="ftcancel">Give up</button>':`<button class="btn" data-act="ftstart">Start ${FT.len}-minute session</button>`}
+  <div class="mut small" style="margin-top:10px">Total focus time: <b>${u.focus||0} min</b></div></div>`;
+}
+
+/* ===== Next class card ===== */
+function nextClassCard(u){
+ const L=u.schedule||[];if(!L.length)return '';
+ const now=new Date(),di=(now.getDay()+6)%7,mins=now.getHours()*60+now.getMinutes();
+ const tm=t=>{const[h,m]=t.split(':').map(Number);return h*60+m};
+ let best=null;
+ for(let off=0;off<7&&!best;off++){
+  const list=L.filter(c=>c.day==(di+off)%7).sort((a,b)=>a.start.localeCompare(b.start));
+  for(const c of list){
+   if(off==0&&tm(c.end)<=mins)continue;
+   best={c,off,live:off==0&&tm(c.start)<=mins,wait:tm(c.start)-mins};break;
+  }
+ }
+ if(!best)return '';
+ const{c,off,live,wait}=best;
+ const txt=live?'In progress · ends '+fmtT(c.end):off==0?'Starts in '+(wait<60?wait+' min':Math.floor(wait/60)+'h '+(wait%60)+'m')+' · '+fmtT(c.start):(off==1?'Tomorrow':DAYS[(di+off)%7])+' · '+fmtT(c.start);
+ return `<div class="card nofloat" style="--c:${colorFor(c.name)}"><div style="display:flex;align-items:center;gap:12px"><span class="cbar"></span><div class="grow"><div class="mut small">${live?'📖 HAPPENING NOW':'⏰ NEXT CLASS'}</div><b>${esc(c.name)}</b>${c.room?` <span class="mut small">· 📍 ${esc(c.room)}</span>`:''}<div class="mut small">${txt}</div></div></div></div>`;
+}
+
 function home(u){
  const L=lvl(u.xp),p=u.xp%100,s=streak(u.active);
  const strip=[...Array(14)].map((_,i)=>`<i class="${u.active.includes(shift(13-i))?'on':''}${i==13?' now':''}"></i>`).join('');
- const T=[['quests','⚔️ Quests'],['habits','🔥 Daily'],['schedule','🗓️ Schedule'],['reviewers','📚 Reviewers'],['quiz','🃏 Quiz'],['friends','👥 Friends'+((u.reqs||[]).filter(k=>db.users[k]).length?' ('+(u.reqs||[]).filter(k=>db.users[k]).length+')':'')],['stats','🏆 Stats']];
+ const T=[['quests','⚔️ Quests'],['habits','🔥 Daily'],['focus','⏱️ Focus'],['schedule','🗓️ Schedule'],['reviewers','📚 Reviewers'],['quiz','🃏 Quiz'],['friends','👥 Friends'+(()=>{const n=u.cloud?CF.reqs.length:(u.reqs||[]).filter(k=>db.users[k]).length;return n?' ('+n+')':''})()],['stats','🏆 Stats']];
  return `<header><b class="brand"><i>⚡</i>Questly</b><span><button class="ghost" data-act="snd" title="Sound">${db.mute?'🔇':'🔊'}</button><button class="ghost" data-act="theme" title="Theme">🌓</button>${u.av} ${esc(u.name)} <button class="ghost" data-act="out">Log out</button></span></header>
  <section class="card hero"><div class="lv" style="--p:${p}"><span>${L}</span></div><div class="grow"><div class="row"><b>Level ${L} · ${['Rookie','Explorer','Adventurer','Hero','Champion','Legend'][Math.min(L-1,5)]}</b><span class="mut">${p}/100 XP</span></div><div class="bar"><div style="width:${p}%"></div></div><div class="strip">${strip}</div></div><div class="fire"><span class="${s?'lit':''}">🔥</span><b>${s}</b><small>day streak</small></div></section>
  ${goal(u)}<nav class="tabs">${T.map(x=>`<button data-act="tab" data-v="${x[0]}" class="${tab==x[0]?'on':''}">${x[1]}</button>`).join('')}</nav>
- ${tab=='quests'?quests(u):tab=='habits'?habits(u):tab=='schedule'?schedule(u):tab=='reviewers'?reviewers(u):tab=='quiz'?quizTab(u):tab=='friends'?friendsTab(u):stats(u)}`}
+ ${tab=='quests'?nextClassCard(u)+quests(u):tab=='habits'?habits(u):tab=='focus'?focusTab(u):tab=='schedule'?schedule(u):tab=='reviewers'?reviewers(u):tab=='quiz'?quizTab(u):tab=='friends'?friendsTab(u):stats(u)}`}
 
 function render(){const u=me();$('#app').innerHTML=u?home(u):auth();const nv=$('.tabs'),on=$('.tabs .on');if(nv&&on)nv.scrollLeft=on.offsetLeft-(nv.clientWidth-on.offsetWidth)/2}
 
@@ -533,13 +822,14 @@ function act(a,v,el){
    if(db.users[k]){err='That username is taken.';return render()}
    db.users[k]={name:n,pw:hash(form.pw),av:pickAv,xp:0,done:0,chk:0,best:0,active:[],tasks:[],habits:[],subjects:[],schedule:[],decks:[],friends:[],reqs:[],sent:[]};
   }else if(!db.users[k]||db.users[k].pw!==hash(form.pw)){err='Wrong username or password.';return render()}
-  db.cur=k;form={un:'',pw:''};err='';tab='quests';save();render();
+  const pw0=form.pw;db.cur=k;form={un:'',pw:''};err='';tab='quests';save();render();
+  if(cloudReady()){const nu=db.users[k];if(nu.cloud)cloudSync(nu);else cloudConnect(nu,pw0,true)}
  }
  else if(a=='close'){el.closest('.modal').remove()}
  else if(a=='snd'){db.mute=!db.mute;save();render();sfx.pop()}
  else if(a=='theme'){const dk=(db.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'))=='dark';db.theme=dk?'light':'dark';save();applyTheme()}
- else if(a=='out'){db.cur=null;mode='login';save();render()}
- else if(a=='tab'){tab=v;render();sfx.pop()}
+ else if(a=='out'){if(FT.run){clearInterval(FT.t);FT.run=false;document.title=TITLE0}CS={};CF=newCF();db.cur=null;mode='login';save();render()}
+ else if(a=='tab'){tab=v;render();sfx.pop();if(v=='friends'&&u&&u.cloud)cloudSync(u)}
  else if(!u)return;
  else if(a=='addsubject'){
   const input=$('#subjectName');
@@ -638,7 +928,8 @@ function act(a,v,el){
   save();render();
  }
  else if(a=='ffill'){const i=$('#frName');if(i){i.value=v;i.focus()}}
- else if(a=='addfriend'){
+  else if(a=='addfriend'){
+  if(u.cloud&&cloudReady()){cloudAdd(u);return}
   const k=($('#frName').value||'').trim().toLowerCase();
   u.friends=u.friends||[];u.reqs=u.reqs||[];u.sent=u.sent||[];
   if(!k){toast('Enter a username first.');return}
@@ -661,6 +952,25 @@ function act(a,v,el){
   if(t)t.friends=(t.friends||[]).filter(x=>x!=db.cur);
   save();render();
  }
+ else if(a=='cfgsave'){
+  const k=$('#cfgKey').value.trim(),url=$('#cfgUrl').value.trim();
+  if(!k||!/^https:\/\/[^\s]+$/.test(url)){toast('Paste your Firebase Web API key and Database URL.');return}
+  db.cloud={apiKey:k,url:url.replace(/\/+$/,'')};save();render();toast('Saved! Now sign in online ☁️');
+ }
+ else if(a=='cfgreset'){if(confirm('Remove the online database settings from this device? Your online data is not deleted.')){db.cloud=null;u.cloud=null;CS={};CF=newCF();save();render()}}
+ else if(a=='cgo'){const i=$('#cloudPw'),pw=i?i.value:'';if(!pw){toast('Enter your password to go online.');return}cloudConnect(u,pw)}
+ else if(a=='cdis'){u.cloud=null;CS={};CF=newCF();save();render();toast('Disconnected. Your online data is still saved.')}
+ else if(a=='csync'){cloudSync(u,true)}
+ else if(a=='cacc'){if(okKey(v))cloudAccept(u,v)}
+ else if(a=='cdec'){if(okKey(v))cloudDrop(u,{['requests/'+u.cloud.key+'/'+v]:null,['outbox/'+v+'/'+u.cloud.key]:null},'Request declined.')}
+ else if(a=='ccan'){if(okKey(v))cloudDrop(u,{['requests/'+v+'/'+u.cloud.key]:null,['outbox/'+u.cloud.key+'/'+v]:null},'Request cancelled.')}
+ else if(a=='crem'){if(okKey(v)&&confirm('Remove this friend?'))cloudDrop(u,{['friends/'+u.cloud.key+'/'+v]:null,['friends/'+v+'/'+u.cloud.key]:null},'Friend removed.')}
+ else if(a=='cheer'){const[k,e]=String(v).split('|');if(okKey(k))cloudCheer(u,k,e)}
+ else if(a=='cclear'){dbx('DELETE','cheers/'+u.cloud.key).then(()=>{CF.cheers=[];render()}).catch(e=>toast(cloudMsg(e)))}
+ else if(a=='copyrules'){try{navigator.clipboard.writeText(RULES).then(()=>toast('Rules copied! 📋'),()=>toast('Select the rules text and copy it manually.'))}catch(e){toast('Select the rules text and copy it manually.')}}
+ else if(a=='ftlen'){if(!FT.run){FT.len=+v;render()}}
+ else if(a=='ftstart'){ftStart()}
+ else if(a=='ftcancel'){ftCancel()}
  else if(a=='addq'){const t=$('#qt').value.trim();if(!t)return;u.tasks.unshift({id:Date.now(),t,d:+$('#qd').value,done:false});save();render();sfx.pop();$('#qt').focus()}
  else if(a=='qdone'){const q=u.tasks.find(x=>x.id==v);if(q&&!q.done){q.done=true;u.done++;award(u,q.d,'quest complete!',el);save();render()}}
  else if(a=='qdel'){u.tasks=u.tasks.filter(x=>x.id!=v);save();render()}
@@ -700,7 +1010,7 @@ document.addEventListener('input',e=>{
   }
 });
 
-document.addEventListener('keydown',e=>{if(e.key!='Enter')return;if(e.target.id=='qzQ'){const n=$('#qzA');if(n)n.focus();return}const m={un:'go',pw:'go',qt:'addq',ht:'addh',subjectName:'addsubject',schName:'addclass',deckName:'adddeck',qzA:'addcard',frName:'addfriend'}[e.target.id];if(m)act(m)});
+document.addEventListener('keydown',e=>{if(e.key!='Enter')return;if(e.target.id=='qzQ'){const n=$('#qzA');if(n)n.focus();return}const m={un:'go',pw:'go',qt:'addq',ht:'addh',subjectName:'addsubject',schName:'addclass',deckName:'adddeck',qzA:'addcard',frName:'addfriend',cloudPw:'cgo'}[e.target.id];if(m)act(m)});
 
 /* ===== Background Motion ===== */
 (function(){
@@ -795,6 +1105,10 @@ document.addEventListener('pointerdown',e=>{
 },{passive:true});
 
 applyTheme();render();
+{const u0=me();if(u0&&u0.cloud&&cloudReady())cloudSync(u0)}
+let pollN=0;
+setInterval(()=>{pollN++;const u=me();if(!u||!u.cloud||!cloudReady()||document.hidden)return;if(tab=='friends'||pollN%3==0)cloudSync(u)},20000);
+document.addEventListener('visibilitychange',()=>{const u=me();if(!document.hidden&&u&&u.cloud&&cloudReady())cloudSync(u)});
 </script>
 </body>
 </html>
