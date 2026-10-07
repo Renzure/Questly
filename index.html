@@ -514,6 +514,9 @@ body::before,body::after{animation:none}
 .btn.danger{background:#e5484d;color:#fff;box-shadow:0 4px 0 #a32a2e}
 .btn.danger:hover{box-shadow:0 6px 0 #a32a2e,0 12px 26px rgba(229,72,77,.35)}
 .danger-zone{border-color:rgba(229,72,77,.5)!important}
+
+.ft-cus{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 18px}
+.ft-cus input{width:110px;margin:0;padding:10px 12px;text-align:center}
 </style>
 </head>
 <body>
@@ -632,10 +635,10 @@ function reviewers(u){
               <a href="${f.data}" target="_blank" rel="noopener" download="${esc(f.name)}"><button type="button">Open</button></a>
               <button data-act="fdel" data-v="${s.id}:${f.id}" title="Delete file">×</button>
             </div>
-          </div>`).join(''):'<div class="no-files">📂 No reviewer files yet. Add one below.</div>'}
+          </div>`).join(''):'<div class="no-files">📂 Pick a file below to open it. Nothing is saved.</div>'}
       </div>
       <div class="upload-row">
-        <label class="upload-label" for="file-${s.id}">📎 Add reviewer file</label>
+        <label class="upload-label" for="file-${s.id}">📂 Open a file</label>
         <input id="file-${s.id}" type="file" data-subject="${s.id}" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.png,.jpg,.jpeg,.webp,.zip">
       </div>
     </div>`;
@@ -645,7 +648,7 @@ function reviewers(u){
       <div class="reviewer-head">
         <div class="grow">
           <h3>📚 My Reviewers</h3>
-          <div class="mut small">Organize your reviewer files by subject.</div>
+          <div class="mut small">Open reviewer files by subject. Files are opened, never saved.</div>
         </div>
       </div>
       <div class="add">
@@ -653,12 +656,12 @@ function reviewers(u){
       </div>
       <input id="reviewerSearch" placeholder="🔎 Search subjects or reviewer files..." maxlength="60">
       <button class="btn" data-act="addsubject">Add subject</button>
-      <div class="reviewer-note">Files are stored in this browser's local storage. Very large files may exceed browser storage limits.</div>
+      <div class="reviewer-note">Files open straight from your device and are never saved in Questly. Browsers can display PDFs and images; other types (Word, PowerPoint) will download instead.</div>
     </div>
     <div class="card">
       <div class="row">
         <b>Reviewer library</b>
-        <span class="mut small">${u.subjects.length} subjects · ${u.subjects.reduce((n,s)=>n+(s.files||[]).length,0)} files</span>
+        <span class="mut small">${u.subjects.length} subjects</span>
       </div>
     </div>
     <div class="card">
@@ -809,7 +812,7 @@ function friendsLocal(u){
 
 /* ===== Online database: Firebase Auth + Realtime Database over REST ===== */
 // Optional: paste your Firebase details here to pre-connect every device, or enter them inside the app (Friends tab).
-const CLOUD_DEFAULT={apiKey:'AIzaSyDkEQj4pfxgepSL9ncugmXUygfDwA17NAw',databaseURL:'https://questly-database-default-rtdb.asia-southeast1.firebasedatabase.app'};
+const CLOUD_DEFAULT={apiKey:'',databaseURL:''};
 const TITLE0=document.title;
 const N=x=>Number(x)||0;
 const okKey=k=>/^[\w-]{1,40}$/.test(String(k));
@@ -1098,6 +1101,7 @@ function focusTab(u){
   <div class="mut small">Stay on task. Finish a session to earn XP (about 1.2 XP per minute).</div>
   <div class="ft-ring" id="ftRing" style="--p:${pct}"><span id="ftTime">${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}</span></div>
   <div class="ft-pre">${[15,25,45,60].map(n=>`<button class="ghost ftp ${FT.len==n?'on':''}" data-act="ftlen" data-v="${n}" ${FT.run?'disabled':''}>${n} min</button>`).join('')}</div>
+  <div class="ft-cus"><span class="mut small">Custom</span><input id="ftCus" type="number" min="5" max="240" step="1" inputmode="numeric" placeholder="5-240" value="${[15,25,45,60].includes(FT.len)?'':FT.len}" ${FT.run?'disabled':''}><span class="mut small">min</span><button class="ghost ftp ${[15,25,45,60].includes(FT.len)?'':'on'}" data-ft="set" ${FT.run?'disabled':''}>Set</button></div>
   ${FT.run?'<button class="btn again" data-act="ftcancel">Give up</button>':`<button class="btn" data-act="ftstart">Start ${FT.len}-minute session</button>`}
   <div class="mut small" style="margin-top:10px">Total focus time: <b>${u.focus||0} min</b></div></div>`;
 }
@@ -1308,19 +1312,15 @@ document.addEventListener('input',e=>{if(e.target.id=='un')form.un=e.target.valu
 
 document.addEventListener('change',e=>{
   if(e.target.matches('input[type=file][data-subject]')){
-    const input=e.target, file=input.files&&input.files[0], sid=input.dataset.subject;
+    /* Open-only: the file is shown straight from the device and is never stored. */
+    const input=e.target,file=input.files&&input.files[0];
     if(!file)return;
-    const u=me(),s=(u.subjects||[]).find(x=>String(x.id)==String(sid));
-    if(!s)return;
-    const reader=new FileReader();
-    reader.onload=()=>{
-      s.files=s.files||[];
-      s.files.unshift({id:Date.now(),name:file.name,size:file.size,type:file.type||'File',data:reader.result});
-      try{save();render();toast('Reviewer added to '+s.name+'!');sfx.ok()}
-      catch(e){toast('Could not save this file. It may be too large for browser storage.')}
-    };
-    reader.onerror=()=>toast('Could not read that file.');
-    reader.readAsDataURL(file);
+    const url=URL.createObjectURL(file);
+    const w=window.open(url,'_blank');
+    if(!w){const a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove()}
+    toast('Opened '+file.name+' 📖 (not saved)');sfx.pop();
+    setTimeout(()=>URL.revokeObjectURL(url),30*60*1000);
+    input.value='';
   }
 });
 
@@ -2362,6 +2362,26 @@ function deadlineCard(u){
   else if(id=='glName'||id=='glW'||id=='glS'){const b=document.querySelector('[data-pl=addg]');if(b)b.click()}
  });
  if(typeof CMDS!=='undefined'&&!CMDS.some(x=>x[0]=='planner'))CMDS.splice(CMDS.length-1,0,['planner','📅 Planner']);
+ render();
+})();
+</script>
+<script>
+/* ===== Custom focus timer length ===== */
+(function(){
+ try{if(db.ftLen>=5&&db.ftLen<=240)FT.len=Math.round(db.ftLen)}catch(e){}
+ function setLen(){
+  if(FT.run)return;
+  const i=document.getElementById('ftCus'),v=Math.round(+(i&&i.value));
+  if(!(v>=5&&v<=240)){toast('Pick a length between 5 and 240 minutes.');if(i)i.focus();return}
+  FT.len=v;db.ftLen=v;save();render();sfx.pop();
+ }
+ document.addEventListener('click',e=>{
+  const b=e.target.closest&&e.target.closest('[data-ft=set]');
+  if(b&&!b.disabled){setLen();return}
+  const p=e.target.closest&&e.target.closest('[data-act=ftlen]');
+  if(p&&!p.disabled){db.ftLen=FT.len;saveLocal()}
+ });
+ document.addEventListener('keydown',e=>{if(e.key=='Enter'&&e.target.id=='ftCus')setLen()});
  render();
 })();
 </script>
