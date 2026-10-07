@@ -240,7 +240,8 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db={users:{},cur:null};
 try{const r=localStorage.getItem('questly');if(r)db=JSON.parse(r)}catch(e){}
-const save=()=>{try{localStorage.setItem('questly',JSON.stringify(db))}catch(e){}try{cloudQueue()}catch(e){}};
+const saveLocal=()=>{try{localStorage.setItem('questly',JSON.stringify(db))}catch(e){}};
+const save=()=>{saveLocal();try{cloudQueue()}catch(e){}};
 const dstr=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');
 const shift=n=>{const d=new Date();d.setDate(d.getDate()-n);return dstr(d)};
 const today=()=>shift(0);
@@ -591,8 +592,8 @@ const pubOf=u=>({uid:CS.uid,name:u.name,av:u.av,xp:u.xp,lv:lvl(u.xp),st:streak(u
 const pushProfile=u=>dbx('PUT','profiles/'+u.cloud.key,pubOf(u));
 async function pushBackup(u){
  const b=JSON.parse(JSON.stringify(u));
- ['pw','cloud','subjects','friends','reqs','sent'].forEach(k=>delete b[k]);
- const body={upd:Date.now(),data:b};
+ ['pw','cloud','subjects','friends','reqs','sent','dirty','cloudTs','onlineFriends'].forEach(k=>delete b[k]);
+ const body={upd:{'.sv':'timestamp'},data:b};
  if(JSON.stringify(body).length>3e6)return;
  await dbx('PUT','userdata/'+CS.uid,body);
 }
@@ -601,7 +602,7 @@ function fixUser(u){
  u.decks.forEach(d=>{let c=d.cards;if(c&&!Array.isArray(c))c=Object.values(c);d.cards=(c||[]).filter(Boolean)});
 }
 function restoreFrom(u,d){
- const keep={pw:u.pw,cloud:u.cloud,subjects:u.subjects};
+ const keep={pw:u.pw,cloud:u.cloud,subjects:u.subjects,cloudTs:u.cloudTs,dirty:u.dirty};
  Object.keys(u).forEach(k=>delete u[k]);
  Object.assign(u,d,keep);fixUser(u);
 }
@@ -612,19 +613,46 @@ async function cloudConnect(u,pw,silent){
   await goOnline(u,pw);
   const bk=await dbx('GET','userdata/'+CS.uid);
   const cx=bk&&bk.data?N(bk.data.xp):0;
-  if(cx>u.xp&&confirm('Found your online save (Level '+lvl(cx)+', '+cx+' XP), which is ahead of this device. Load it?')){restoreFrom(u,bk.data);toast('Online save loaded! 📥')}
-  else{await pushBackup(u);toast('You are online! ☁️')}
-  await pushProfile(u);
-  save();render();sfx.ok();
+  if(cx>u.xp&&confirm('Found your online save (Level '+lvl(cx)+', '+cx+' XP), which is ahead of this device. Load it?')){
+   restoreFrom(u,bk.data);u.cloudTs=N(bk.upd);u.dirty=false;await pushProfile(u);toast('Online save loaded! 📥');
+  }else{await cloudPushNow(u);toast('You are online! ☁️')}
+  saveLocal();render();sfx.ok();
   cloudSync(u);
  }catch(e){toast(cloudMsg(e));render()}
 }
-let cq=0;
+let cq=0,REV=0,pushing=false;
+const syncIcon=u=>!u||!u.cloud?'':CF.err?'⚠️':(u.dirty||pushing)?'🔄':'☁️';
+function paintSync(){const u=me(),e=document.getElementById('syncDot');if(e&&u)e.textContent=syncIcon(u)}
 function cloudQueue(){
  const u=me();
  if(!u||!u.cloud||!cloudReady())return;
+ REV++;u.dirty=true;paintSync();
  clearTimeout(cq);
- cq=setTimeout(async()=>{try{await tok();await pushProfile(u);await pushBackup(u)}catch(e){CF.err=cloudMsg(e)}},4000);
+ cq=setTimeout(()=>{cloudPushNow(u).catch(e=>{CF.err=cloudMsg(e);paintSync()})},3000);
+}
+async function cloudPushNow(u){
+ if(!u||!u.cloud||!cloudReady()||pushing)return;
+ pushing=true;paintSync();
+ const r0=REV;
+ try{
+  await tok();
+  if(await cloudPull(u)){render();return}
+  await pushProfile(u);
+  await pushBackup(u);
+  u.cloudTs=N(await dbx('GET','userdata/'+CS.uid+'/upd'));
+  if(REV==r0)u.dirty=false;
+  CF.err='';
+ }finally{pushing=false;saveLocal();paintSync()}
+ if(u.dirty&&me()===u)cloudQueue();
+}
+async function cloudPull(u){
+ const t=N(await dbx('GET','userdata/'+CS.uid+'/upd'));
+ if(!t||t<=N(u.cloudTs))return false;
+ const bk=await dbx('GET','userdata/'+CS.uid);
+ if(!bk||!bk.data)return false;
+ if(u.dirty&&!confirm('Your progress was changed on another device, and this device also has unsynced changes.\n\nOK = load the online version\nCancel = keep this device (it will replace the online version)')){u.cloudTs=t;return false}
+ restoreFrom(u,bk.data);u.cloudTs=t;u.dirty=false;saveLocal();
+ return true;
 }
 const cleanProf=(k,p)=>({key:k,name:String(p&&p.name||k).slice(0,20),av:AV.includes(p&&p.av)?p.av:'🙂',xp:N(p&&p.xp),lv:Math.max(1,N(p&&p.lv)),st:N(p&&p.st),upd:N(p&&p.upd)});
 const ago=t=>{if(!t)return '—';const s=(Date.now()-t)/1000;return s<300?'🟢 online':s<3600?Math.floor(s/60)+'m ago':s<86400?Math.floor(s/3600)+'h ago':Math.floor(s/86400)+'d ago'};
@@ -632,8 +660,12 @@ async function cloudSync(u,manual){
  if(!u||!u.cloud||!cloudReady()||CF.busy)return;
  CF.busy=true;
  const key=u.cloud.key,prevReq=CF.reqs.length;
+ let pulled=false;
  try{
   await tok();
+  try{pulled=await cloudPull(u)}catch(e){}
+  if(u.dirty)try{await cloudPushNow(u)}catch(e){}
+  if(pulled&&manual!==false)toast('Synced from your other device 📥');
   const [fr,rq,ob,ch]=await Promise.all([dbx('GET','friends/'+key),dbx('GET','requests/'+key),dbx('GET','outbox/'+key),dbx('GET','cheers/'+key)]);
   const keys=o=>Object.keys(o||{}).filter(okKey);
   const fk=keys(fr).filter(k=>fr[k]),rk=keys(rq),ok0=keys(ob),still=[];
@@ -662,7 +694,8 @@ async function cloudSync(u,manual){
  }catch(e){CF.err=cloudMsg(e)}
  CF.busy=false;CF.last=Date.now();
  const ae=document.activeElement;
- if(!(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))&&(tab=='friends'||CF.reqs.length!=prevReq||manual))render();
+ if(!(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))&&(tab=='friends'||CF.reqs.length!=prevReq||manual||pulled))render();
+ paintSync();
  if(manual&&!CF.err)toast('Synced ✅');
 }
 async function cloudAdd(u){
@@ -803,7 +836,7 @@ function home(u){
  const L=lvl(u.xp),p=u.xp%100,s=streak(u.active);
  const strip=[...Array(14)].map((_,i)=>`<i class="${u.active.includes(shift(13-i))?'on':''}${i==13?' now':''}"></i>`).join('');
  const T=[['quests','⚔️ Quests'],['habits','🔥 Daily'],['focus','⏱️ Focus'],['schedule','🗓️ Schedule'],['reviewers','📚 Reviewers'],['quiz','🃏 Quiz'],['friends','👥 Friends'+(()=>{const n=u.cloud?CF.reqs.length:(u.reqs||[]).filter(k=>db.users[k]).length;return n?' ('+n+')':''})()],['stats','🏆 Stats']];
- return `<header><b class="brand"><i>⚡</i>Questly</b><span><button class="ghost" data-act="snd" title="Sound">${db.mute?'🔇':'🔊'}</button><button class="ghost" data-act="theme" title="Theme">🌓</button>${u.av} ${esc(u.name)} <button class="ghost" data-act="out">Log out</button></span></header>
+ return `<header><b class="brand"><i>⚡</i>Questly</b><span><button class="ghost" data-act="snd" title="Sound">${db.mute?'🔇':'🔊'}</button><button class="ghost" data-act="theme" title="Theme">🌓</button><span id="syncDot" title="Online sync">${syncIcon(u)}</span> ${u.av} ${esc(u.name)} <button class="ghost" data-act="out">Log out</button></span></header>
  <section class="card hero"><div class="lv" style="--p:${p}"><span>${L}</span></div><div class="grow"><div class="row"><b>Level ${L} · ${['Rookie','Explorer','Adventurer','Hero','Champion','Legend'][Math.min(L-1,5)]}</b><span class="mut">${p}/100 XP</span></div><div class="bar"><div style="width:${p}%"></div></div><div class="strip">${strip}</div></div><div class="fire"><span class="${s?'lit':''}">🔥</span><b>${s}</b><small>day streak</small></div></section>
  ${goal(u)}<nav class="tabs">${T.map(x=>`<button data-act="tab" data-v="${x[0]}" class="${tab==x[0]?'on':''}">${x[1]}</button>`).join('')}</nav>
  ${tab=='quests'?nextClassCard(u)+quests(u):tab=='habits'?habits(u):tab=='focus'?focusTab(u):tab=='schedule'?schedule(u):tab=='reviewers'?reviewers(u):tab=='quiz'?quizTab(u):tab=='friends'?friendsTab(u):stats(u)}`}
@@ -828,7 +861,10 @@ function act(a,v,el){
  else if(a=='close'){el.closest('.modal').remove()}
  else if(a=='snd'){db.mute=!db.mute;save();render();sfx.pop()}
  else if(a=='theme'){const dk=(db.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'))=='dark';db.theme=dk?'light':'dark';save();applyTheme()}
- else if(a=='out'){if(FT.run){clearInterval(FT.t);FT.run=false;document.title=TITLE0}CS={};CF=newCF();db.cur=null;mode='login';save();render()}
+ else if(a=='out'){if(FT.run){clearInterval(FT.t);FT.run=false;document.title=TITLE0}
+  const fin=()=>{CS={};CF=newCF()};
+  if(u&&u.cloud&&cloudReady()&&u.dirty){clearTimeout(cq);cloudPushNow(u).catch(()=>{}).then(fin)}else fin();
+  db.cur=null;mode='login';saveLocal();render()}
  else if(a=='tab'){tab=v;render();sfx.pop();if(v=='friends'&&u&&u.cloud)cloudSync(u)}
  else if(!u)return;
  else if(a=='addsubject'){
@@ -1108,7 +1144,8 @@ applyTheme();render();
 {const u0=me();if(u0&&u0.cloud&&cloudReady())cloudSync(u0)}
 let pollN=0;
 setInterval(()=>{pollN++;const u=me();if(!u||!u.cloud||!cloudReady()||document.hidden)return;if(tab=='friends'||pollN%3==0)cloudSync(u)},20000);
-document.addEventListener('visibilitychange',()=>{const u=me();if(!document.hidden&&u&&u.cloud&&cloudReady())cloudSync(u)});
+document.addEventListener('visibilitychange',()=>{const u=me();if(!u||!u.cloud||!cloudReady())return;if(document.hidden){if(u.dirty){clearTimeout(cq);cloudPushNow(u).catch(()=>{})}}else cloudSync(u,false)});
+window.addEventListener('online',()=>{const u=me();if(u&&u.cloud&&cloudReady())cloudSync(u,false)});
 </script>
 </body>
 </html>
