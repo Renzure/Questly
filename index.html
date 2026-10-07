@@ -490,6 +490,30 @@ body::before,body::after{animation:none}
 :root[data-acc] .aur.a1{background:radial-gradient(circle,var(--blue),transparent 65%)}
 :root[data-acc] .aur.a2{background:radial-gradient(circle,var(--h3),transparent 65%)}
 @media (min-width:960px){body.has-side .qk{display:flex}}
+
+/* ===== BOSS BATTLE + SETTINGS ===== */
+.arena{position:relative;height:310px;border-radius:22px;overflow:hidden;margin:16px 0;display:grid;place-items:center;background:radial-gradient(circle at 50% 115%,rgba(255,201,51,.3),transparent 55%),radial-gradient(2px 2px at 20% 30%,#fff,transparent),radial-gradient(2px 2px at 70% 20%,#fff,transparent),radial-gradient(1.5px 1.5px at 85% 60%,#fff,transparent),radial-gradient(1.5px 1.5px at 35% 70%,#fff,transparent),linear-gradient(180deg,#1a1650,#0b1030);box-shadow:inset 0 0 60px rgba(0,0,0,.5)}
+.arena::after{content:"";position:absolute;left:0;right:0;bottom:0;height:48px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02));border-top:1px solid rgba(255,255,255,.18)}
+.bossname{position:absolute;top:14px;left:0;right:0;text-align:center;color:#fff;font-weight:700;letter-spacing:.06em;text-shadow:0 2px 8px rgba(0,0,0,.6)}
+.bossE{font-size:128px;line-height:1;filter:drop-shadow(0 14px 26px rgba(0,0,0,.65));animation:bossIdle 3.5s ease-in-out infinite}
+@keyframes bossIdle{50%{transform:translateY(-6px)}}
+.bossE.hit{animation:bossHit .45s}
+@keyframes bossHit{0%{transform:translateX(0);filter:brightness(1)}20%{transform:translateX(-14px) rotate(-4deg);filter:brightness(3) saturate(0) drop-shadow(0 0 24px #ff3b3b)}50%{transform:translateX(12px) rotate(3deg)}100%{transform:none}}
+.hero2{position:absolute;left:10%;bottom:20px;font-size:58px;z-index:2;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))}
+.hero2.lunge{animation:lunge .45s ease-out}
+@keyframes lunge{40%{transform:translateX(110px) rotate(12deg) scale(1.15)}100%{transform:none}}
+.slash{position:absolute;left:50%;top:50%;width:260px;height:7px;margin:-3px 0 0 -130px;border-radius:9px;background:linear-gradient(90deg,transparent,#fff,transparent);box-shadow:0 0 22px #fff,0 0 40px #ffc933;transform:rotate(-35deg) scaleX(0);opacity:0;z-index:3}
+.slash.go{animation:slash .38s ease-out}
+@keyframes slash{0%{transform:rotate(-35deg) scaleX(0);opacity:1}55%{transform:rotate(-35deg) scaleX(1);opacity:1}100%{transform:rotate(-35deg) scaleX(1.1);opacity:0}}
+.dmg{position:absolute;z-index:4;font-weight:700;font-size:34px;color:#ffd75e;text-shadow:0 2px 0 #7a4b00,0 0 14px rgba(255,201,51,.9);animation:dmgUp .95s ease-out forwards;pointer-events:none;white-space:nowrap}
+.dmg.crit{color:#ff6b6b;font-size:46px;text-shadow:0 2px 0 #6b0f0f,0 0 18px rgba(255,80,80,.9)}
+@keyframes dmgUp{from{transform:translateY(0) scale(.6);opacity:1}to{transform:translateY(-80px) scale(1.2);opacity:0}}
+.hpbar{height:18px;border-radius:99px;background:var(--line);overflow:hidden}
+.hpbar div{height:100%;background:linear-gradient(90deg,#ef4444,#f97316);border-radius:99px;transition:width .5s;box-shadow:0 0 14px rgba(239,68,68,.6)}
+.chrg{margin:16px 0 4px;font-size:18px;text-align:center}
+.btn.danger{background:#e5484d;color:#fff;box-shadow:0 4px 0 #a32a2e}
+.btn.danger:hover{box-shadow:0 6px 0 #a32a2e,0 12px 26px rgba(229,72,77,.35)}
+.danger-zone{border-color:rgba(229,72,77,.5)!important}
 </style>
 </head>
 <body>
@@ -1100,11 +1124,11 @@ function nextClassCard(u){
 function home(u){
  const L=lvl(u.xp),p=u.xp%100,s=streak(u.active);
  const strip=[...Array(14)].map((_,i)=>`<i class="${u.active.includes(shift(13-i))?'on':''}${i==13?' now':''}"></i>`).join('');
- const T=[['quests','⚔️ Quests'],['habits','🔥 Daily'],['focus','⏱️ Focus'],['music','🎧 Music'],['lang','🌍 Languages'],['schedule','🗓️ Schedule'],['reviewers','📚 Reviewers'],['quiz','🃏 Quiz'],['friends','👥 Friends'+(()=>{const n=u.cloud?CF.reqs.length:(u.reqs||[]).filter(k=>db.users[k]).length;return n?' ('+n+')':''})()],['chat','💬 Chat'+(window.qUnread?qUnread(u):'')],['rewards','🎁 Rewards'],['stats','🏆 Stats']];
+ const T=[['quests','⚔️ Quests'],['habits','🔥 Daily'],['focus','⏱️ Focus'],['music','🎧 Music'],['lang','🌍 Languages'],['schedule','🗓️ Schedule'],['reviewers','📚 Reviewers'],['quiz','🃏 Quiz'],['friends','👥 Friends'+(()=>{const n=u.cloud?CF.reqs.length:(u.reqs||[]).filter(k=>db.users[k]).length;return n?' ('+n+')':''})()],['chat','💬 Chat'+(window.qUnread?qUnread(u):'')],['planner','📅 Planner'],['buddy','🐾 Buddy'],['rewards','🎁 Rewards'],['boss','👹 Boss'+(window.qBoss?qBoss(u):'')],['settings','⚙️ Settings'],['stats','🏆 Stats']];
  return `<header><b class="brand"><i>⚡</i><span class="grad">Questly</span></b><span><button class="ghost" data-act="snd" title="Sound">${db.mute?'🔇':'🔊'}</button><button class="ghost" data-act="theme" title="Theme">🌓</button><span id="syncDot" title="Online sync">${syncIcon(u)}</span> ${u.av} ${esc(u.name)} <button class="ghost" data-act="out">Log out</button></span></header>
  <section class="card hero"><div class="lv" style="--p:${p}"><span>${L}</span></div><div class="grow"><div class="row"><b>Level ${L} · ${['Rookie','Explorer','Adventurer','Hero','Champion','Legend'][Math.min(L-1,5)]}</b><span class="mut">${p}/100 XP</span></div><div class="bar"><div style="width:${p}%"></div></div><div class="strip">${strip}</div></div><div class="fire"><span class="${s?'lit':''}">🔥</span><b>${s}</b><small>day streak</small></div></section>
  ${goal(u)}<nav class="tabs">${T.map(x=>`<button data-act="tab" data-v="${x[0]}" class="${tab==x[0]?'on':''}">${x[1]}</button>`).join('')}</nav>
- ${tab=='quests'?nextClassCard(u)+quests(u):tab=='habits'?habits(u):tab=='focus'?focusTab(u):tab=='schedule'?schedule(u):tab=='reviewers'?reviewers(u):tab=='quiz'?quizTab(u):tab=='friends'?friendsTab(u):tab=='music'?musicTab(u):tab=='lang'?langTab(u):tab=='chat'?chatTab(u):tab=='rewards'?rewardsTab(u):stats(u)}`}
+ ${tab=='quests'?nextClassCard(u)+quests(u):tab=='habits'?habits(u):tab=='focus'?focusTab(u):tab=='schedule'?schedule(u):tab=='reviewers'?reviewers(u):tab=='quiz'?quizTab(u):tab=='friends'?friendsTab(u):tab=='music'?musicTab(u):tab=='lang'?langTab(u):tab=='chat'?chatTab(u):tab=='rewards'?rewardsTab(u):tab=='boss'?bossTab(u):tab=='buddy'?buddyTab(u):tab=='planner'?plannerTab(u):tab=='settings'?settingsTab(u):stats(u)}`}
 
 function render(){const u=me();$('#app').innerHTML=u?home(u):auth();const nv=$('.tabs'),on=$('.tabs .on');if(nv&&on)nv.scrollLeft=on.offsetLeft-(nv.clientWidth-on.offsetWidth)/2}
 
@@ -1811,7 +1835,7 @@ function doSpin(u){
  },4400);
 }
 /* quick search */
-const CMDS=[['quests','⚔️ Quests'],['habits','🔥 Daily'],['focus','⏱️ Focus'],['music','🎧 Music'],['lang','🌍 Languages'],['schedule','🗓️ Schedule'],['reviewers','📚 Reviewers'],['quiz','🃏 Quiz'],['friends','👥 Friends'],['chat','💬 Chat'],['rewards','🎁 Rewards'],['stats','🏆 Stats']];
+const CMDS=[['quests','⚔️ Quests'],['habits','🔥 Daily'],['focus','⏱️ Focus'],['music','🎧 Music'],['lang','🌍 Languages'],['schedule','🗓️ Schedule'],['reviewers','📚 Reviewers'],['quiz','🃏 Quiz'],['friends','👥 Friends'],['chat','💬 Chat'],['rewards','🎁 Rewards'],['boss','👹 Boss'],['settings','⚙️ Settings'],['stats','🏆 Stats']];
 function cmdk(){
  if(!me()||document.getElementById('cmdk'))return;
  const el=document.createElement('div');el.id='cmdk';el.className='modal';
@@ -1890,6 +1914,455 @@ function cmdk(){
   }catch(e){}
  },15000);
  applyAcc();
+})();
+</script>
+
+<script>
+/* ===== Boss battles, settings, account deletion ===== */
+const BOSS=[['🟢','Slime King'],['👺','Goblin Chief'],['🧟','Zombie Lord'],['🐺','Dire Wolf'],['🐲','Ember Dragon'],['🦑','Abyss Kraken'],['👾','Glitch Overlord'],['😈','Procrastination Demon']];
+const bmax=k=>Math.min(1200,120+k*70);
+const bget=u=>{if(!u.boss)u.boss={k:0,hp:120,max:120,ch:3,hits:0,kills:0};return u.boss};
+window.qBoss=u=>{const c=(u.boss&&u.boss.ch)||0;return c?' ('+c+')':''};
+{const _aw=award;award=function(u,xp,msg,el){_aw(u,xp,msg,el);try{bget(u).ch+=Math.max(1,Math.round(xp/10))}catch(e){}}}
+function bossTab(u){
+ const b=bget(u),B=BOSS[b.k%BOSS.length],pct=Math.max(0,b.hp/b.max*100);
+ return `<div class="card nofloat"><div class="row"><b>👹 Boss Battle</b><span class="mut small">Bosses defeated: ${b.kills||0}</span></div>
+  <div class="arena" id="arena"><div class="bossname">${B[1]} · Lv ${b.k+1}</div><div class="bossE" id="bossE">${B[0]}</div><div class="slash" id="slash"></div><div class="hero2" id="hero2">${esc(u.av)}</div></div>
+  <div class="row small"><span>❤️ HP</span><span id="hpTxt">${b.hp}/${b.max}</span></div><div class="hpbar"><div id="hpFill" style="width:${pct}%"></div></div>
+  <div class="chrg">⚡ <b id="chN">${b.ch}</b> charges</div>
+  <button class="btn" data-bs="atk" id="atkBtn" ${b.ch<1?'disabled':''}>⚔️ Attack!</button>
+  <div class="reviewer-note">Turn your real work into power. Finishing quests, daily check-ins, focus sessions and language lessons earns charges, and bigger tasks earn more. Defeat the boss for bonus XP!</div></div>`;
+}
+function bossAttack(u){
+ const b=bget(u);if(b.ch<1||bossAttack.lock)return;
+ b.ch--;b.hits=(b.hits||0)+1;
+ const crit=Math.random()<.18,dmg=Math.round((12+Math.random()*16)*(crit?2:1));
+ b.hp=Math.max(0,b.hp-dmg);
+ const E=id=>document.getElementById(id),be=E('bossE'),ar=E('arena');
+ if(be&&ar){
+  const hr=E('hero2'),sl=E('slash');
+  hr.classList.remove('lunge');void hr.offsetWidth;hr.classList.add('lunge');
+  sl.classList.remove('go');void sl.offsetWidth;sl.classList.add('go');
+  setTimeout(()=>{be.classList.remove('hit');void be.offsetWidth;be.classList.add('hit')},130);
+  const d=document.createElement('div');d.className='dmg'+(crit?' crit':'');d.textContent=(crit?'CRIT ':'')+'-'+dmg;d.style.left=(36+Math.random()*22)+'%';d.style.top='26%';ar.appendChild(d);setTimeout(()=>d.remove(),1000);
+  const r=be.getBoundingClientRect();confetti(r.left+r.width/2,r.top+r.height/2,crit?28:12);
+  E('hpFill').style.width=(b.hp/b.max*100)+'%';E('hpTxt').textContent=b.hp+'/'+b.max;E('chN').textContent=b.ch;E('atkBtn').disabled=b.ch<1;
+ }
+ if(crit)sfx.up();else{beep(220,.08);beep(140,.12,.06)}
+ if(b.hp<=0){bossAttack.lock=true;setTimeout(()=>{bossAttack.lock=false;bossWin(u,b)},800)}
+ save();
+}
+function bossWin(u,b){
+ const B=BOSS[b.k%BOSS.length],xp=40+b.k*10,lv=lvl(u.xp);
+ u.xp+=xp;b.kills=(b.kills||0)+1;b.k++;b.max=bmax(b.k);b.hp=b.max;b.ch+=2;save();
+ const N=BOSS[b.k%BOSS.length],m=document.createElement('div');m.className='modal';
+ m.innerHTML=`<div class="mbox"><div class="big">🏆</div><h2>${B[1]} defeated!</h2><p class="mut">+${xp} XP · +2 bonus charges</p><p class="mut small">Next up: ${N[0]} ${N[1]}</p><button class="btn" data-act="close">Onward!</button></div>`;
+ document.body.appendChild(m);confetti(innerWidth/2,innerHeight/2,170);sfx.up();
+ if(lvl(u.xp)>lv)setTimeout(()=>levelUp(lvl(u.xp)),900);
+ if(tab=='boss')render();
+}
+function settingsTab(u){
+ const on=online2(u);
+ return `<div class="card nofloat"><h3 style="margin:0 0 10px;font-size:19px">⚙️ Account</h3>
+  <div class="lbub"><span>${esc(u.av)}</span><div><b>${esc(u.name)}</b><div class="mut small">Level ${lvl(u.xp)} · ${u.xp} XP · ${on?'Online sync is on':'Saved on this device'}</div></div></div>
+  <div class="mut small">Change avatar</div><div class="avs">${AV.map(a=>`<button data-st="av" data-v="${a}" class="${a==u.av?'on':''}">${a}</button>`).join('')}</div>
+  <button class="btn again" data-st="export">⬇️ Export my data</button></div>
+ <div class="card nofloat danger-zone"><b style="color:#e5484d">Danger zone</b><p class="mut small" style="line-height:1.6">Deleting your account permanently erases your progress, quests, decks, schedule, reviewer files, messages and friendships${on?', including your online data':''}. This cannot be undone.</p><button class="btn danger" data-st="delete">🗑️ Delete my account</button></div>`;
+}
+function exportData(u){
+ const d=JSON.parse(JSON.stringify(u));['pw','cloud'].forEach(k=>delete d[k]);
+ d.subjects=(u.subjects||[]).map(x=>({name:x.name,files:(x.files||[]).map(f=>f.name)}));
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(d,null,2)],{type:'application/json'}));a.download='questly-'+u.name+'.json';document.body.appendChild(a);a.click();a.remove();toast('Your data was downloaded.');
+}
+function wipeLocal(k){
+ delete db.users[k];
+ Object.values(db.users).forEach(x=>['friends','reqs','sent'].forEach(f=>{if(x[f])x[f]=x[f].filter(y=>y!=k)}));
+ if(db.chats)Object.keys(db.chats).forEach(p=>{if(p.split('|').includes(k))delete db.chats[p]});
+ db.cur=null;
+}
+async function wipeOnline(u){
+ const k=u.cloud.key;await tok();const uid=CS.uid||u.cloud.uid,ks=o=>Object.keys(o||{}).filter(okKey),P={};
+ const [fr,rq,ob]=await Promise.all([dbx('GET','friends/'+k),dbx('GET','requests/'+k),dbx('GET','outbox/'+k)]);
+ ks(fr).forEach(f=>{P['friends/'+k+'/'+f]=null;P['friends/'+f+'/'+k]=null});
+ ks(rq).forEach(f=>{P['requests/'+k+'/'+f]=null;P['outbox/'+f+'/'+k]=null});
+ ks(ob).forEach(f=>{P['outbox/'+k+'/'+f]=null;P['requests/'+f+'/'+k]=null});
+ for(const f of ks(fr)){try{const c=await dbx('GET','chats/'+k+'/'+f);ks(c).forEach(id=>{P['chats/'+k+'/'+f+'/'+id]=null})}catch(e){}}
+ P['cheers/'+k]=null;P['userdata/'+uid]=null;
+ await dbx('PATCH','',P);
+ await dbx('DELETE','profiles/'+k);
+ try{await jfetch('https://identitytoolkit.googleapis.com/v1/accounts:delete?key='+encodeURIComponent(cfg().apiKey),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken:await tok()})})}catch(e){}
+}
+function delModal(u){
+ const on=online2(u),m=document.createElement('div');m.className='modal';
+ m.innerHTML=`<div class="mbox" style="max-width:400px;text-align:left"><div class="big" style="text-align:center">⚠️</div><h2 style="color:#e5484d;text-align:center;font-size:28px">Delete account?</h2><p class="mut small" style="text-align:center;line-height:1.6">This permanently erases your progress, quests, decks, schedule, reviewer files, messages and friendships${on?', including your online data':''}. This can't be undone.</p><input id="delUn" placeholder="Type your username (${esc(u.name)}) to confirm" autocomplete="off"><input id="delPw" type="password" placeholder="Password" autocomplete="current-password"><div class="err" id="delErr"></div><button class="btn danger" id="delGo" disabled>Delete forever</button><button class="btn again" id="delNo">Cancel</button></div>`;
+ document.body.appendChild(m);
+ const un=m.querySelector('#delUn'),pw=m.querySelector('#delPw'),go=m.querySelector('#delGo'),er=m.querySelector('#delErr');
+ const chk=()=>{go.disabled=!(un.value.trim().toLowerCase()==u.name.toLowerCase()&&pw.value)};
+ un.oninput=pw.oninput=chk;
+ m.querySelector('#delNo').onclick=()=>m.remove();
+ go.onclick=async()=>{
+  if(hash(pw.value)!==u.pw){er.textContent='Wrong password.';return}
+  go.disabled=true;go.textContent='Deleting…';er.textContent='';
+  let warn='';
+  if(on&&u.cloud){try{await wipeOnline(u)}catch(e){warn=' (some online data could not be removed: '+cloudMsg(e)+')'}}
+  const k=db.cur;
+  if(FT.run){clearInterval(FT.t);FT.run=false;document.title=TITLE0}
+  wipeLocal(k);CS={};CF=newCF();CH={with:null,msgs:[],draft:'',latest:{}};LS=null;
+  saveLocal();m.remove();mode='signup';tab='quests';render();toast('Your account was deleted.'+warn);
+ };
+ un.focus();
+}
+document.addEventListener('click',e=>{
+ const u=me();if(!u)return;
+ const b=e.target.closest&&e.target.closest('[data-bs]');
+ if(b&&b.dataset.bs=='atk'){bossAttack(u);return}
+ const st=e.target.closest&&e.target.closest('[data-st]');
+ if(!st)return;const k=st.dataset.st;
+ if(k=='av'){u.av=st.dataset.v;save();render();sfx.pop()}
+ else if(k=='export')exportData(u);
+ else if(k=='delete')delModal(u);
+});
+{const C=[['boss','👹 Boss'],['settings','⚙️ Settings']];C.forEach(c=>{if(!CMDS.some(x=>x[0]==c[0]))CMDS.splice(CMDS.length-1,0,c)})}
+</script>
+<style>
+/* ===== BUDDY COMPANION ===== */
+#buddy{position:fixed;right:20px;bottom:20px;z-index:38;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
+body:has(#mini) #buddy{bottom:250px}
+body:has(#mini.big) #buddy{bottom:440px}
+body:has(#mini.min) #buddy{bottom:84px}
+@media (max-width:560px){#buddy{right:12px;bottom:12px}body:has(#mini) #buddy{bottom:236px}body:has(#mini.big) #buddy{bottom:430px}body:has(#mini.min) #buddy{bottom:76px}}
+.bd-pet{pointer-events:auto;position:relative;border:0;background:none;cursor:pointer;font-size:58px;line-height:1;padding:0;filter:drop-shadow(0 10px 14px rgba(0,0,0,.35));animation:bdBob 3s ease-in-out infinite;transition:transform .2s cubic-bezier(.2,1.6,.4,1)}
+.bd-pet:hover{transform:scale(1.12) rotate(-4deg)}
+.bd-pet:active{transform:scale(.92)}
+.bd-pet.jump{animation:bdJump .6s cubic-bezier(.2,1.6,.4,1)}
+@keyframes bdBob{50%{transform:translateY(-7px) rotate(2deg)}}
+@keyframes bdJump{40%{transform:translateY(-26px) scale(1.2) rotate(-8deg)}}
+.bd-hat{position:absolute;left:50%;top:-.3em;transform:translateX(-50%) rotate(-8deg);font-size:.46em;line-height:1;pointer-events:none}
+.bd-bub{background:var(--card);color:var(--ink);border:2px solid var(--gold);border-radius:16px 16px 4px 16px;padding:9px 13px;font-size:13px;font-weight:600;max-width:220px;opacity:0;transform:translateY(8px) scale(.9);transition:opacity .25s,transform .25s cubic-bezier(.2,1.6,.4,1);box-shadow:var(--shadow);pointer-events:none}
+.bd-bub.show{opacity:1;transform:none}
+.bd-heart{position:fixed;z-index:90;font-size:22px;pointer-events:none;animation:bdHeart 1s ease-out forwards}
+@keyframes bdHeart{from{transform:translate(0,0) scale(.5);opacity:1}to{transform:translate(var(--dx),-90px) scale(1.3);opacity:0}}
+.bd-stage{text-align:center;padding:30px 20px 24px;border-radius:24px;color:#fff;position:relative;overflow:hidden;box-shadow:0 14px 40px rgba(0,0,0,.25)}
+.bd-stage::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 40%,rgba(255,255,255,.28),transparent 60%);pointer-events:none}
+.bd-big{position:relative;display:inline-block;font-size:120px;line-height:1.1;animation:bdBob 3s ease-in-out infinite;filter:drop-shadow(0 16px 22px rgba(0,0,0,.4))}
+.bd-big .bd-hat{font-size:.42em;top:-.18em}
+.bd-name{font-size:28px;font-weight:700;margin-top:6px}
+.bd-sub{opacity:.85;font-size:14px}
+.bd-stats{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px;text-align:left}
+.bd-stats .mbar{background:rgba(255,255,255,.25)}
+.bd-stats .mbar div{background:linear-gradient(90deg,#fff,#ffd75e)}
+.bd-coin{font-weight:700;font-size:20px}
+.bd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:12px;margin-top:12px}
+.bd-item{border:2px solid var(--line);background:var(--bg);color:var(--ink);border-radius:16px;padding:14px 8px;cursor:pointer;font-weight:600;font-size:12px;transition:transform .2s cubic-bezier(.2,1.6,.4,1),border-color .2s}
+.bd-item:hover:not(:disabled){transform:translateY(-4px) scale(1.05);border-color:var(--blue)}
+.bd-item:disabled{opacity:.5;cursor:not-allowed}
+.bd-item span{display:block;font-size:34px;margin-bottom:4px}
+.bd-item.on{border-color:var(--gold);box-shadow:0 0 16px rgba(255,201,51,.5)}
+.bd-eggs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-top:14px}
+.bd-egg{border:0;border-radius:22px;padding:24px 12px;color:#fff;cursor:pointer;font-weight:700;font-size:16px;display:flex;flex-direction:column;gap:8px;align-items:center;transition:transform .25s cubic-bezier(.2,1.6,.4,1),box-shadow .25s}
+.bd-egg span{font-size:64px;animation:bdWob 2s ease-in-out infinite}
+.bd-egg small{font-weight:500;opacity:.9}
+.bd-egg:hover{transform:translateY(-6px) scale(1.05);box-shadow:0 16px 34px rgba(0,0,0,.3)}
+@keyframes bdWob{25%{transform:rotate(-9deg)}75%{transform:rotate(9deg)}}
+.bg-arena{position:relative;height:300px;border-radius:22px;overflow:hidden;margin-top:12px;display:grid;place-items:center;user-select:none;-webkit-user-select:none;touch-action:manipulation;background:radial-gradient(2px 2px at 15% 25%,#fff,transparent),radial-gradient(1.5px 1.5px at 75% 15%,#fff,transparent),radial-gradient(2px 2px at 60% 70%,#fff,transparent),radial-gradient(1.5px 1.5px at 30% 80%,#fff,transparent),linear-gradient(180deg,#1a1650,#0b1030);box-shadow:inset 0 0 50px rgba(0,0,0,.5)}
+.bg-hud{position:absolute;top:10px;left:16px;right:16px;display:flex;justify-content:space-between;color:#fff;font-weight:700;font-size:20px;pointer-events:none;z-index:2}
+.bstar{position:absolute;font-size:40px;line-height:1;background:none;border:0;cursor:pointer;padding:6px;filter:drop-shadow(0 0 12px rgba(255,201,51,.9));animation:bstarIn .25s cubic-bezier(.2,1.7,.4,1)}
+.bstar.bomb{filter:drop-shadow(0 0 12px rgba(255,60,60,.9))}
+@keyframes bstarIn{from{transform:scale(0) rotate(-90deg)}}
+.bg-pop{position:absolute;z-index:3;font-weight:700;font-size:26px;color:#ffd75e;text-shadow:0 2px 0 #7a4b00;pointer-events:none;animation:dmgUp .8s ease-out forwards}
+.bg-pop.neg{color:#ff6b6b}
+@media (prefers-reduced-motion:reduce){.bd-pet,.bd-big,.bd-egg span{animation:none!important}}
+</style>
+<script>
+/* ===== BUDDY: evolving companion, coins, shop, arcade ===== */
+const BLINES={
+ dragon:{n:'Dragon',e:['🥚','🐣','🦎','🐲','🐉'],s:['Egg','Hatchling','Drakeling','Dragon','Elder Dragon'],c:'#ef4444,#f97316'},
+ cat:{n:'Wildcat',e:['🥚','🐱','😺','🦁','🐯'],s:['Egg','Kitten','Cat','Lion','Tiger King'],c:'#0d9488,#22d3ee'},
+ cosmo:{n:'Cosmic',e:['🥚','👽','🛸','🚀','🌌'],s:['Egg','Alien','Saucer','Rocket','Galaxy'],c:'#7c3aed,#ec4899'}
+};
+const BEVO=[2,4,7,11];
+const bStage=L=>L>=11?4:L>=7?3:L>=4?2:L>=2?1:0;
+const HATS=[['🧢',15],['🎀',25],['🕶️',25],['🎓',30],['🎩',40],['👑',80]];
+const FOOD=[['🍎','Apple',5,15],['🍖','Steak',8,30],['🍰','Cake',14,55]];
+const pget=u=>{if(!u.pet)u.pet={line:null,name:'Buddy',coins:0,hat:null,own:[],hap:70,hapT:Date.now(),pets:0,plays:{d:'',n:0},stage:0,off:false};const p=u.pet;p.own=p.own||[];p.plays=p.plays||{d:'',n:0};return p};
+const phap=p=>Math.max(0,Math.min(100,Math.round((p.hap==null?70:p.hap)-(Date.now()-(p.hapT||Date.now()))/36e5*2)));
+const pemo=(u,p)=>BLINES[p.line].e[bStage(lvl(u.xp))];
+const pmood=h=>h>=70?'😄 Happy':h>=40?'🙂 Okay':h>=15?'😕 Hungry':'😢 Starving';
+let bdTimer=0;
+function buddySay(msg,ms){
+ const b=document.getElementById('bdBub');if(!b)return;
+ b.textContent=msg;b.classList.add('show');clearTimeout(bdTimer);bdTimer=setTimeout(()=>b.classList.remove('show'),ms||3800);
+}
+function buddyQuip(u){
+ const p=pget(u),h=phap(p),n=p.name,t=today(),active=(u.active||[]).includes(t);
+ if(h<25)return 'I\'m so hungry... feed me? 🍎';
+ if(!active)return 'Psst! One quest today keeps your streak alive 🔥';
+ const q=['You\'re crushing it! 💪','Focus mode? I\'ll guard the screen 🛡️','Tiny steps, big levels ✨','Hydrate, hero 💧','Did someone say XP? 👀','I believe in you! 🌟','Boss fight later? ⚔️','Pet me! I dare you 😏'];
+ return q[Math.floor(Math.random()*q.length)];
+}
+function buddyPaint(){
+ const u=me();let el=document.getElementById('buddy');
+ const p=u&&u.pet;
+ if(!u||!p||!p.line||p.off||!BLINES[p.line]){if(el)el.remove();return}
+ const s=bStage(lvl(u.xp));
+ if(s>p.stage){p.stage=s;saveLocal();buddyEvolve(u,s)}else if(s<p.stage)p.stage=s;
+ if(!el){el=document.createElement('div');el.id='buddy';el.innerHTML='<div class="bd-bub" id="bdBub"></div><button class="bd-pet" data-bd="pet" title="Pet me!"><span class="bd-hat"></span><span class="bd-e"></span></button>';document.body.appendChild(el)}
+ el.querySelector('.bd-e').textContent=pemo(u,p);
+ el.querySelector('.bd-hat').textContent=p.hat||'';
+}
+function buddyEvolve(u,s){
+ const p=pget(u),L=BLINES[p.line],m=document.createElement('div');m.className='modal';
+ m.innerHTML=`<div class="mbox"><div class="big">${L.e[s]}</div><h2>${esc(p.name)} evolved!</h2><p class="mut">Your buddy is now a <b>${L.s[s]}</b>.</p><button class="btn" data-act="close">Wow!</button></div>`;
+ document.body.appendChild(m);confetti(innerWidth/2,innerHeight/2,160);sfx.up();
+}
+function buddyTab(u){
+ const p=pget(u);
+ if(!p.line)return `<div class="card nofloat" style="text-align:center"><h3 style="margin:0 0 6px;font-size:19px">🥚 Choose Your Egg</h3><div class="mut small">Your Buddy lives on screen, grows as you level up, and cheers on every quest. Pick an egg to hatch!</div>
+  <div class="bd-eggs">${Object.keys(BLINES).map(k=>`<button class="bd-egg" style="background:linear-gradient(135deg,${BLINES[k].c})" data-bd="pick" data-v="${k}"><span>🥚</span>${BLINES[k].n}<small>${BLINES[k].e.slice(1).join(' ')}</small></button>`).join('')}</div></div>`;
+ const L=BLINES[p.line],lv=lvl(u.xp),s=bStage(lv),h=phap(p),nxt=s<4?BEVO[s]:null;
+ const left=Math.max(0,3-(p.plays.d==today()?p.plays.n:0));
+ return `<div class="card nofloat bd-stage" style="background:linear-gradient(135deg,${L.c})">
+  <div class="bd-big" data-bd="pet"><span class="bd-hat">${p.hat||''}</span>${L.e[s]}</div>
+  <div class="bd-name">${esc(p.name)}</div>
+  <div class="bd-sub">${L.s[s]} · ${pmood(h)} · ${nxt?'Evolves at Level '+nxt:'Max evolution reached 🏆'}</div>
+  <div class="bd-stats"><div><div class="row small"><span>Happiness</span><span>${h}%</span></div><div class="mbar" style="margin:0"><div style="width:${h}%"></div></div></div>
+  <div style="text-align:right"><div class="bd-coin">🪙 ${p.coins}</div><div class="small" style="opacity:.85">${h>=70?'Happy bonus: ×1.5 coins':'Feed me for a coin bonus'}</div></div></div>
+  <div class="deck-btns" style="justify-content:center"><button class="ghost" style="color:#fff;border-color:rgba(255,255,255,.5)" data-bd="rename">✏️ Rename</button><button class="ghost" style="color:#fff;border-color:rgba(255,255,255,.5)" data-bd="toggle">${p.off?'👁️ Show on screen':'🙈 Hide from screen'}</button></div></div>
+ <div class="card nofloat"><b>🍽️ Feed your Buddy</b><div class="mut small">Coins come from quests, check-ins, focus sessions and lessons.</div>
+  <div class="bd-grid">${FOOD.map((f,i)=>`<button class="bd-item" data-bd="feed" data-v="${i}" ${p.coins<f[2]?'disabled':''}><span>${f[0]}</span>${f[1]}<br>🪙 ${f[2]} · +${f[3]}% mood</button>`).join('')}</div></div>
+ <div class="card nofloat"><b>🎩 Wardrobe</b><div class="mut small">Buy once, wear any time.</div>
+  <div class="bd-grid">${HATS.map((x,i)=>{const own=p.own.includes(x[0]),on=p.hat==x[0];return `<button class="bd-item${on?' on':''}" data-bd="hat" data-v="${i}" ${!own&&p.coins<x[1]?'disabled':''}><span>${x[0]}</span>${on?'Wearing':own?'Wear':'🪙 '+x[1]}</button>`}).join('')}
+  ${p.hat?'<button class="bd-item" data-bd="unhat"><span>🚫</span>Remove hat</button>':''}</div></div>
+ <div class="card nofloat"><div class="row"><b>🌠 Star Catcher Arcade</b><span class="mut small">${left} play${left==1?'':'s'} left today</span></div>
+  <div class="mut small">Tap ⭐ (+1) and 💎 (+3) for 20 seconds. Avoid 💣 (−2)! Each point earns 2 🪙 (max 40).</div>
+  <div class="bg-arena" id="bgArena"><button class="btn" style="width:auto;padding:14px 30px" data-bd="gstart" ${left?'':'disabled'}>${left?'▶ Play':'Come back tomorrow'}</button></div></div>`;
+}
+let BGM=null;
+function bdgStop(){if(BGM){clearInterval(BGM.sp);clearInterval(BGM.tk);BGM=null}}
+function bdgStart(u){
+ const p=pget(u),t=today();if(p.plays.d!=t)p.plays={d:t,n:0};
+ if(p.plays.n>=3){toast('No plays left today. Come back tomorrow! 🌙');return}
+ const ar=document.getElementById('bgArena');if(!ar)return;
+ bdgStop();
+ ar.innerHTML='<div class="bg-hud"><span>⭐ <b id="bgS">0</b></span><span id="bgT">20s</span></div>';
+ const g=BGM={score:0,end:Date.now()+20000,sp:0,tk:0};
+ sfx.pop();
+ const spawn=()=>{
+  const r=Math.random(),kind=r<.12?'bomb':r<.28?'gem':'star',b=document.createElement('button');
+  b.className='bstar'+(kind=='bomb'?' bomb':'');b.textContent=kind=='bomb'?'💣':kind=='gem'?'💎':'⭐';
+  b.style.left=(4+Math.random()*80)+'%';b.style.top=(16+Math.random()*64)+'%';
+  b.addEventListener('pointerdown',ev=>{
+   ev.stopPropagation();if(BGM!==g)return;
+   const v=kind=='bomb'?-2:kind=='gem'?3:1;g.score=Math.max(0,g.score+v);
+   const s=document.getElementById('bgS');if(s)s.textContent=g.score;
+   const pop=document.createElement('div');pop.className='bg-pop'+(v<0?' neg':'');pop.textContent=(v>0?'+':'')+v;pop.style.left=b.style.left;pop.style.top=b.style.top;ar.appendChild(pop);setTimeout(()=>pop.remove(),800);
+   if(v<0){beep(120,.2)}else sfx.ok();
+   b.remove();
+  });
+  ar.appendChild(b);setTimeout(()=>b.remove(),kind=='gem'?1000:1400);
+ };
+ g.sp=setInterval(spawn,420);spawn();
+ g.tk=setInterval(()=>{
+  if(BGM!==g)return;
+  const a=document.getElementById('bgArena');if(!a){bdgStop();return}
+  const left=Math.max(0,g.end-Date.now()),tt=document.getElementById('bgT');
+  if(tt)tt.textContent=Math.ceil(left/1000)+'s';
+  if(left<=0){
+   const sc=g.score;bdgStop();
+   const uu=me();if(!uu)return;const pp=pget(uu);
+   if(pp.plays.d!=today())pp.plays={d:today(),n:0};
+   pp.plays.n++;const coins=Math.min(40,sc*2);pp.coins+=coins;save();
+   confetti(innerWidth/2,innerHeight/3,coins?90:20);sfx.up();
+   toast('🌠 Score '+sc+' → +'+coins+' 🪙');
+   render();buddySay(coins>=30?'WOW, what a run! 🔥':coins?'Nice catch! 🌟':'Next time! 💪');
+  }
+ },100);
+}
+(function(){
+ const _a=award;
+ award=function(u,xp,msg,el){
+  _a(u,xp,msg,el);
+  try{const p=u.pet;if(p&&p.line){let c=Math.max(1,Math.round(xp/4));if(phap(p)>=70)c=Math.round(c*1.5);p.coins+=c;buddyPaint();buddySay('+'+c+' 🪙 '+(c>=8?'Amazing work!':'Nice one!'),2600)}}catch(e){}
+ };
+ const _r=render;
+ render=function(){
+  if(BGM&&tab=='buddy'&&document.getElementById('bgArena')){buddyPaint();return}
+  bdgStop();_r();buddyPaint();
+ };
+ document.addEventListener('click',e=>{
+  const b=e.target.closest&&e.target.closest('[data-bd]');if(!b||b.disabled)return;
+  const u=me();if(!u)return;const p=pget(u),k=b.dataset.bd,v=b.dataset.v;
+  if(k=='pick'&&BLINES[v]){p.line=v;p.stage=0;p.hap=70;p.hapT=Date.now();p.coins+=10;save();render();confetti(innerWidth/2,innerHeight/3,100);sfx.up();setTimeout(()=>buddySay('Hi! I\'m your new Buddy! 🥚✨ Level up to hatch me!',4500),400)}
+  else if(!p.line)return;
+  else if(k=='pet'){
+   p.pets=(p.pets||0)+1;p.hap=Math.min(100,phap(p)+1);p.hapT=Date.now();
+   const r=b.getBoundingClientRect();
+   for(let i=0;i<5;i++){const h=document.createElement('div');h.className='bd-heart';h.textContent=['💖','💛','💙','✨','💜'][i%5];h.style.left=(r.left+r.width/2+(Math.random()-.5)*40)+'px';h.style.top=(r.top+r.height*.3)+'px';h.style.setProperty('--dx',(Math.random()-.5)*60+'px');h.style.animationDelay=i*70+'ms';document.body.appendChild(h);setTimeout(()=>h.remove(),1300)}
+   const pe=document.querySelector('#buddy .bd-pet');if(pe){pe.classList.remove('jump');void pe.offsetWidth;pe.classList.add('jump')}
+   if(p.pets%10==0){p.coins++;toast('🪙 +1 bonus coin for all the love!')}
+   sfx.pop();buddySay(buddyQuip(u));save();
+   if(tab=='buddy'){const big=document.querySelector('.bd-big');if(big){big.style.transform='scale(1.12)';setTimeout(()=>big.style.transform='',200)}}
+  }
+  else if(k=='feed'){const f=FOOD[+v];if(!f||p.coins<f[2])return;p.coins-=f[2];p.hap=Math.min(100,phap(p)+f[3]);p.hapT=Date.now();save();render();sfx.ok();confetti(innerWidth/2,innerHeight/3,30);buddySay('Yum!! '+f[0]+' So tasty 😋')}
+  else if(k=='hat'){const x=HATS[+v];if(!x)return;
+   if(p.hat==x[0]){p.hat=null}
+   else if(p.own.includes(x[0])){p.hat=x[0]}
+   else if(p.coins>=x[1]){p.coins-=x[1];p.own.push(x[0]);p.hat=x[0];confetti(innerWidth/2,innerHeight/3,50);sfx.up();setTimeout(()=>buddySay('Look at me! So stylish '+x[0],3500),200)}
+   else return;
+   save();render()}
+  else if(k=='unhat'){p.hat=null;save();render()}
+  else if(k=='rename'){const n=prompt('Name your Buddy (max 14 characters):',p.name);if(n&&n.trim()){p.name=n.trim().slice(0,14);save();render();buddySay('Call me '+p.name+'! 😎')}}
+  else if(k=='toggle'){p.off=!p.off;save();render()}
+  else if(k=='gstart')bdgStart(u);
+ });
+ setInterval(()=>{
+  const u=me();if(!u||document.hidden||!u.pet||!u.pet.line||u.pet.off)return;
+  if(document.querySelector('.modal')||BGM)return;
+  buddySay(buddyQuip(u),4200);
+ },35000);
+ const _cm=typeof CMDS!=='undefined'?CMDS:null;
+ if(_cm&&!_cm.some(x=>x[0]=='buddy'))_cm.splice(_cm.length-1,0,['buddy','🐾 Buddy']);
+ render();
+})();
+</script>
+<style>
+/* ===== STUDY PLANNER ===== */
+.pl-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pl-chip{display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;background:var(--bg);border:1px solid var(--line);color:var(--mut)}
+.pl-badge{font-size:12px;font-weight:700;padding:4px 11px;border-radius:99px;color:#fff;white-space:nowrap}
+.pl-plan{margin:12px 0 4px;padding:12px 14px;border-radius:14px;background:rgba(47,91,255,.1);font-size:14px;font-weight:500;line-height:1.5}
+.pl-form{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}
+.pl-form .full{grid-column:1/-1}
+.pl-form label{font-size:12px;color:var(--mut);font-weight:500;margin-top:4px}
+.pl-topic{padding:10px 0!important}
+.pl-topic .chk{width:28px;height:28px}
+.pl-res{margin-top:14px;padding:16px 18px;border-radius:18px;background:linear-gradient(135deg,rgba(47,91,255,.14),rgba(255,201,51,.18));font-weight:600;line-height:1.6}
+.pl-res b{font-size:22px}
+.gin{width:84px!important;margin:0!important;padding:8px 10px!important;text-align:center}
+.pl-mini{border-left:6px solid var(--c,#2f5bff);display:flex;align-items:center;gap:12px}
+@media (max-width:480px){.pl-form{grid-template-columns:1fr}}
+</style>
+<script>
+/* ===== STUDY PLANNER: deadlines, daily plan, grade calculator ===== */
+const PL_ICON={Exam:'📝',Quiz:'❓',Assignment:'📄',Project:'🧩'};
+const dparse=s=>{const m=/^(\d{4})-(\d\d)-(\d\d)$/.exec(s||'');return m?new Date(+m[1],+m[2]-1,+m[3]):null};
+const dleft=s=>{const d=dparse(s);if(!d)return null;const t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/864e5)};
+const dlabel=n=>n<0?Math.abs(n)+'d overdue':n==0?'Today!':n==1?'Tomorrow':'in '+n+' days';
+const dcol=n=>n<=1?'#e5484d':n<=3?'#f59e0b':n<=7?'#2f5bff':'#14b8a6';
+const plX=u=>{if(!Array.isArray(u.exams))u.exams=[];return u.exams};
+const plG=u=>{if(!u.grades)u.grades={target:75,rows:[]};if(!Array.isArray(u.grades.rows))u.grades.rows=[];return u.grades};
+function plCard(u,x){
+ const n=dleft(x.date),col=n==null?'#6571a1':dcol(n),T=x.topics||[],dn=T.filter(t=>t.done).length,rem=T.length-dn;
+ const pct=T.length?Math.round(dn/T.length*100):0;
+ let plan;
+ if(!T.length)plan='💡 Add the topics you need to cover and I\'ll build a daily plan for you.';
+ else if(!rem)plan='🎉 Every topic is covered! Do a quick review, then mark it complete.';
+ else if(n<0)plan='⚠️ This is overdue. Finish the '+rem+' remaining topic'+(rem>1?'s':'')+' or mark it complete.';
+ else if(n==0)plan='🔥 It\'s today! Quick-review the '+rem+' remaining topic'+(rem>1?'s':'')+'.';
+ else{const per=Math.ceil(rem/n);plan='📅 Study <b>'+per+' topic'+(per>1?'s':'')+' per day</b> for the next '+n+' day'+(n>1?'s':'')+' to cover all '+rem+' remaining.'}
+ return `<div class="card nofloat" style="border-left:6px solid ${col}">
+  <div class="pl-head"><span style="font-size:26px">${PL_ICON[x.type]||'📝'}</span><div class="grow"><b style="font-size:18px">${esc(x.name)}</b><div>${x.subject?`<span class="pl-chip">📚 ${esc(x.subject)}</span> `:''}<span class="pl-chip">${esc(x.type)} · ${esc(x.date)}</span></div></div>
+   <span class="pl-badge" style="background:${col}">${n==null?'No date':dlabel(n)}</span><button class="x" data-pl="delx" data-v="${x.id}" title="Delete">×</button></div>
+  <div class="mbar"><div style="width:${pct}%"></div></div>
+  <div class="mut small" style="margin-top:6px">${dn}/${T.length} topics covered · ${pct}%</div>
+  <div class="pl-plan">${plan}</div>
+  <ul>${T.map(t=>`<li class="pl-topic ${t.done?'dn':''}"><button class="chk" data-pl="tgl" data-v="${x.id}:${t.id}" ${t.done?'disabled':''}>${t.done?'✓':''}</button><span class="grow t">${esc(t.t)}</span><button class="x" data-pl="delt" data-v="${x.id}:${t.id}">×</button></li>`).join('')}</ul>
+  <div class="add"><input id="tp-${x.id}" placeholder="Add a topic (e.g. Chapter 3: Derivatives)" maxlength="80"><button class="pill" data-pl="addt" data-v="${x.id}">Add</button></div>
+  <div class="deck-btns"><button class="pill" data-pl="study">⏱️ Study now</button><button class="pill" data-pl="done" data-v="${x.id}">✅ Mark complete</button></div></div>`;
+}
+function plannerTab(u){
+ const X=plX(u),G=plG(u);
+ const act=X.filter(x=>!x.done).sort((a,b)=>String(a.date).localeCompare(String(b.date))),fin=X.filter(x=>x.done).slice(-5).reverse();
+ const subs=[...new Set([...(u.subjects||[]).map(s=>s.name),...(u.schedule||[]).map(c=>c.name)])];
+ const rows=G.rows,sc=rows.filter(r=>r.s!==''&&r.s!=null&&!isNaN(+r.s));
+ const earned=sc.reduce((a,r)=>a+r.w*r.s/100,0),wd=sc.reduce((a,r)=>a+r.w,0),wt=rows.reduce((a,r)=>a+r.w,0),remW=Math.max(0,100-wd);
+ let res='';
+ if(rows.length){
+  const cur=wd>0?(earned/wd*100).toFixed(1):null;
+  let need='';
+  if(remW<=0)need='All components are graded. Final grade: <b>'+earned.toFixed(1)+'%</b>';
+  else{const nd=(G.target-earned)/remW*100;need=nd<=0?'🎉 You\'ve already secured your <b>'+G.target+'%</b> target!':nd>100?'😬 Even 100% on the remaining '+remW+'% won\'t reach '+G.target+'%. Aim as high as you can!':'To reach <b>'+G.target+'%</b>, you need at least <b>'+nd.toFixed(1)+'%</b> on the remaining '+remW+'%.'}
+  res=`<div class="pl-res">${cur!=null?'Current standing: <b>'+cur+'%</b> on graded work<br>':''}${need}${wt!=100?`<div class="mut small" style="font-weight:500;margin-top:6px">Heads up: your weights add up to ${wt}%.</div>`:''}</div>`;
+ }
+ return `<div class="card nofloat"><h3 style="margin:0 0 2px;font-size:19px">📅 Study Planner</h3>
+  <div class="mut small" style="margin-bottom:8px">Track exams, quizzes and deadlines. Add topics and get a daily study plan that adapts to the days you have left. Covering topics earns XP.</div>
+  <div class="pl-form">
+   <div class="full"><label for="plName">What's coming up?</label><input id="plName" placeholder="e.g. Calculus Midterm" maxlength="60"></div>
+   <div><label for="plDate">Due / exam date</label><input id="plDate" type="date"></div>
+   <div><label for="plType">Type</label><select id="plType">${Object.keys(PL_ICON).map(t=>`<option>${t}</option>`).join('')}</select></div>
+   <div class="full"><label for="plSub">Subject (optional)</label><input id="plSub" list="plSubs" placeholder="Pick or type a subject" maxlength="40"><datalist id="plSubs">${subs.map(s=>`<option value="${esc(s)}">`).join('')}</datalist></div>
+  </div><button class="btn" data-pl="addx">Add to planner</button></div>
+ ${act.length?act.map(x=>plCard(u,x)).join(''):'<div class="card nofloat"><div class="empty">📅<br>Nothing scheduled.<br>Add your next exam or deadline above!</div></div>'}
+ ${fin.length?`<div class="card nofloat"><b>✅ Recently completed</b><ul>${fin.map(x=>`<li class="dn"><span>${PL_ICON[x.type]||'📝'}</span><span class="grow t">${esc(x.name)}</span><span class="mut small">${esc(x.date)}</span></li>`).join('')}</ul></div>`:''}
+ <div class="card nofloat"><h3 style="margin:0 0 2px;font-size:19px">🧮 Grade Calculator</h3>
+  <div class="mut small" style="margin-bottom:8px">Enter your graded components with their weights. Leave the score blank for work that hasn't happened yet, and I'll tell you what you need on the rest.</div>
+  <div class="row"><b>Target grade (%)</b><input id="glTarget" class="gin" type="number" min="0" max="100" value="${G.target}"></div>
+  <ul>${rows.map(r=>`<li><div class="grow"><b>${esc(r.n)}</b><div class="mut small">Weight ${r.w}%</div></div><input class="gin" type="number" min="0" max="100" placeholder="score %" data-gs="${r.id}" value="${r.s==null?'':r.s}"><button class="x" data-pl="delg" data-v="${r.id}">×</button></li>`).join('')||'<li class="empty">🧮<br>Add components like Quizzes, Midterm, Finals.</li>'}</ul>
+  <div class="add"><input id="glName" placeholder="Component (e.g. Midterm)" maxlength="30"><input id="glW" class="gin" type="number" min="1" max="100" placeholder="wt %"><input id="glS" class="gin" type="number" min="0" max="100" placeholder="score %"></div>
+  <button class="btn" data-pl="addg">Add component</button>${res}</div>`;
+}
+function deadlineCard(u){
+ const L=plX(u).filter(x=>!x.done&&dleft(x.date)!=null&&dleft(x.date)<=7).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3);
+ if(!L.length)return '';
+ return L.map(x=>{const n=dleft(x.date),T=x.topics||[],rem=T.filter(t=>!t.done).length;
+  return `<div class="card nofloat pl-mini" style="--c:${dcol(n)}"><span style="font-size:26px">${PL_ICON[x.type]||'📝'}</span><div class="grow"><div class="mut small">${n<0?'⚠️ OVERDUE':'⏳ COMING UP'}</div><b>${esc(x.name)}</b>${x.subject?` <span class="mut small">· ${esc(x.subject)}</span>`:''}<div class="mut small">${dlabel(n)}${T.length?' · '+rem+' topic'+(rem==1?'':'s')+' left':''}</div></div><button class="pill" data-act="tab" data-v="planner">Open</button></div>`}).join('');
+}
+(function(){
+ const _n=nextClassCard;
+ nextClassCard=function(u){return _n(u)+deadlineCard(u)};
+ const find=(u,id)=>plX(u).find(x=>x.id==id);
+ document.addEventListener('click',e=>{
+  const b=e.target.closest&&e.target.closest('[data-pl]');if(!b||b.disabled)return;
+  const u=me();if(!u)return;const k=b.dataset.pl,v=b.dataset.v;
+  if(k=='addx'){
+   const n=$('#plName').value.trim(),d=$('#plDate').value;
+   if(!n){toast('Enter a name first.');$('#plName').focus();return}
+   if(!d){toast('Pick a date.');return}
+   plX(u).push({id:Date.now(),name:n,date:d,type:$('#plType').value,subject:$('#plSub').value.trim(),topics:[],done:false});
+   save();render();toast('Added to your planner! 📅');sfx.pop();
+  }
+  else if(k=='delx'){if(confirm('Delete this item?')){u.exams=plX(u).filter(x=>x.id!=v);save();render()}}
+  else if(k=='addt'){
+   const x=find(u,v),i=document.getElementById('tp-'+v),t=i?i.value.trim():'';
+   if(!x||!t){toast('Type a topic first.');return}
+   x.topics=x.topics||[];x.topics.push({id:Date.now(),t,done:false});save();render();sfx.pop();
+   const ni=document.getElementById('tp-'+v);if(ni)ni.focus();
+  }
+  else if(k=='tgl'){
+   const[a,c]=v.split(':'),x=find(u,a),t=x&&(x.topics||[]).find(z=>z.id==c);
+   if(t&&!t.done){t.done=true;award(u,8,'· topic covered 📖',b);save();render()}
+  }
+  else if(k=='delt'){const[a,c]=v.split(':'),x=find(u,a);if(x){x.topics=(x.topics||[]).filter(z=>z.id!=c);save();render()}}
+  else if(k=='done'){
+   const x=find(u,v);if(!x||x.done)return;
+   const n=dleft(x.date);x.done=true;
+   award(u,n!=null&&n>=0?30:10,n!=null&&n>=0?'· ready on time! 🎓':'· finished',b);save();render();
+  }
+  else if(k=='study'){tab='focus';render();sfx.pop();window.scrollTo(0,0)}
+  else if(k=='addg'){
+   const n=$('#glName').value.trim(),w=+$('#glW').value,s=$('#glS').value;
+   if(!n||!(w>0&&w<=100)){toast('Enter a name and a weight between 1 and 100.');return}
+   if(s!==''&&!(+s>=0&&+s<=100)){toast('Score must be between 0 and 100.');return}
+   plG(u).rows.push({id:Date.now(),n,w,s:s===''?'':+s});save();render();sfx.pop();
+  }
+  else if(k=='delg'){const G=plG(u);G.rows=G.rows.filter(r=>r.id!=v);save();render()}
+ });
+ document.addEventListener('change',e=>{
+  const u=me();if(!u)return;const t=e.target;
+  if(t.id=='glTarget'){const v=Math.max(0,Math.min(100,+t.value||0));plG(u).target=v;save();render()}
+  else if(t.dataset&&t.dataset.gs){
+   const r=plG(u).rows.find(z=>z.id==t.dataset.gs);
+   if(r){r.s=t.value===''?'':Math.max(0,Math.min(100,+t.value));save();render()}
+  }
+ });
+ document.addEventListener('keydown',e=>{
+  if(e.key!='Enter')return;const id=e.target.id||'';
+  if(id.startsWith('tp-')){const b=document.querySelector('[data-pl=addt][data-v="'+id.slice(3)+'"]');if(b)b.click()}
+  else if(id=='plName'||id=='plSub'){const b=document.querySelector('[data-pl=addx]');if(b)b.click()}
+  else if(id=='glName'||id=='glW'||id=='glS'){const b=document.querySelector('[data-pl=addg]');if(b)b.click()}
+ });
+ if(typeof CMDS!=='undefined'&&!CMDS.some(x=>x[0]=='planner'))CMDS.splice(CMDS.length-1,0,['planner','📅 Planner']);
+ render();
 })();
 </script>
 </body>
