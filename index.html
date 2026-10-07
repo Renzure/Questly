@@ -765,7 +765,9 @@ function onlineFriends(u){
  <div class="card nofloat"><b>🌍 Global top 10</b>${CF.board.length?rank(CF.board,mine.key):`<div class="empty">${CF.boardErr?esc(CF.boardErr):CF.last?'No players yet.':'Loading…'}</div>`}</div>`;
 }
 function friendsTab(u){
- return cloudCard(u)+(u.cloud&&cloudReady()?onlineFriends(u):friendsLocal(u));
+ const on=u.cloud&&cloudReady();
+ if(on&&!CF.err)return onlineFriends(u)+`<details><summary class="mut small" style="cursor:pointer;padding:10px 4px">☁️ Online sync settings</summary>${cloudCard(u)}</details>`;
+ return cloudCard(u)+(on?onlineFriends(u):friendsLocal(u));
 }
 
 /* ===== Focus timer (pomodoro) ===== */
