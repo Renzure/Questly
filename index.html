@@ -5477,8 +5477,7 @@ function rewardsTab(u) {
     cur = db.acc || 'royal';
   return `<div class="card nofloat" style="text-align:center"><h3 style="margin:0 0 6px;font-size:19px">🎡 Daily Lucky Spin</h3><div class="mut small">Spin once a day for bonus XP.</div>
   <div class="wwrap"><div class="wptr"></div><div class="wheel" id="wheel" style="transform:rotate(${rot}deg)${sp ? ';transition:none' : ''}">${WHEEL.map((x, i) => `<b style="--r:${i * 60 + 30}deg">${x}</b>`).join('')}</div></div>
-  <button class="btn" data-rw="spin" ${sp ? 'disabled' : ''}>${sp ? 'You won ' + WHEEL[sp.i] + ' XP today! Come back tomorrow' : 'Spin the wheel'}</button></div>
- <div class="card nofloat"><b>🎨 Themes</b><div class="mut small">Pick an accent color for your whole AstroQuest.</div><div class="sws">${ACC.map(a => `<button class="sw${a[0] == cur ? ' on' : ''}" data-rw="acc" data-v="${a[0]}"><i style="background:linear-gradient(135deg,${a[2]})"></i>${a[1]}</button>`).join('')}</div></div>`;}
+  <button class="btn" data-rw="spin" ${sp ? 'disabled' : ''}>${sp ? 'You won ' + WHEEL[sp.i] + ' XP today! Come back tomorrow' : 'Spin the wheel'}</button></div>`;}
 let spinning = false;
 function doSpin(u) {
   if (spinning || (u.spin && u.spin.d == today())) return;
@@ -7357,7 +7356,8 @@ function deadlineCard(u) {
   settingsTab = function (u) {
     const h = _st(u),
       i = h.indexOf('<div class="card nofloat danger-zone"');
-    return i < 0 ? h + ntCard(u) : h.slice(0, i) + ntCard(u) + h.slice(i);};
+    const th = `<div class="card nofloat" id="themesCard"><b>🎨 Themes</b><div class="mut small">Pick an accent color for your whole AstroQuest.</div><div class="sws">${ACC.map(a => `<button class="sw${a[0] == (db.acc || 'royal') ? ' on' : ''}" data-rw="acc" data-v="${a[0]}"><i style="background:linear-gradient(135deg,${a[2]})"></i>${a[1]}</button>`).join('')}</div></div>`;
+    return i < 0 ? h + th + ntCard(u) : h.slice(0, i) + th + ntCard(u) + h.slice(i);};
 
   /* ---- delivering reminders ---- */
   const iconUrl = () => {
