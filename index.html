@@ -5323,7 +5323,11 @@ function langTab(u) {
   <div class="w-tag">Level ${L}${st ? ' · 🔥 ' + st + '-day streak' : ''} · Ready to level up?</div></div><div class="w-skip">tap anywhere to skip</div>`;
     document.body.appendChild(el);
     document.body.classList.add('welcoming');
-    el.addEventListener('click', () => close(el, true));
+    el.addEventListener('click', ev => {
+      close(el, true);
+      /* pass the tap through so the tab/button under the welcome screen still works */
+      const t = document.elementFromPoint(ev.clientX, ev.clientY);
+      if (t && t.closest && t.closest('[data-act]')) t.click();});
     sfx.up();
     setTimeout(() => say(lead + ', ' + nm.replace(/[_-]+/g, ' ') + '! ' + (fresh ? "Let's get started!" : "Great to see you. Let's level up!")), 650);
 
