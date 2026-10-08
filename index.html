@@ -3730,7 +3730,7 @@ function home(u) {
     ['stats', '🏆 Stats']];
   return `<header><b class="brand"><i class="rkt" title="Launch!">${ROCKET}</i><span class="grad">AstroQuest</span></b><span>${window.ntBell ? ntBell(u) : ''}<button class="ghost" data-act="snd" title="Sound">${db.mute ? '🔇' : '🔊'}</button><button class="ghost" data-act="theme" title="Theme">🌓</button><span id="syncDot" title="Online sync">${syncIcon(u)}</span> ${u.av} ${esc(u.name)} <button class="ghost" data-act="out">Log out</button></span></header>
  <section class="card hero"><div class="lv" style="--p:${p}"><span>${L}</span></div><div class="grow"><div class="row"><b>Level ${L} · ${['Rookie', 'Explorer', 'Adventurer', 'Hero', 'Champion', 'Legend'][Math.min(L - 1, 5)]}</b><span class="mut">${p}/100 XP</span></div><div class="bar"><div style="width:${p}%"></div></div><div class="strip">${strip}</div></div><div class="fire"><span class="${s ? 'lit' : ''}">🔥</span><b>${s}</b><small>day streak</small></div></section>
- ${goal(u)}<nav class="tabs">${T.map(x => `<button data-act="tab" data-v="${x[0]}" class="${tab == x[0] ? 'on' : ''}">${x[1]}</button>`).join('')}</nav>
+ ${goal(u)}${window.gmNudge ? gmNudge(u) : ''}<nav class="tabs">${T.map(x => `<button data-act="tab" data-v="${x[0]}" class="${tab == x[0] ? 'on' : ''}">${x[1]}</button>`).join('')}</nav>
  ${tab == 'quests' ? nextClassCard(u) + quests(u) : tab == 'habits' ? habits(u) : tab == 'focus' ? focusTab(u) : tab == 'schedule' ? schedule(u) : tab == 'reviewers' ? reviewers(u) : tab == 'quiz' ? quizTab(u) : tab == 'friends' ? friendsTab(u) : tab == 'music' ? musicTab(u) : tab == 'lang' ? langTab(u) : tab == 'chat' ? chatTab(u) : tab == 'rewards' ? rewardsTab(u) : tab == 'boss' ? bossTab(u) : tab == 'buddy' ? buddyTab(u) : tab == 'planner' ? plannerTab(u) : tab == 'settings' ? settingsTab(u) : stats(u)}`;}
 
 function render() {
@@ -7499,6 +7499,361 @@ function deadlineCard(u) {
     if (!me()) closePanel();};
   setInterval(tick, 30000);
   setTimeout(tick, 5000);
+  render();
+})();</script>
+
+  <style>
+/* ===== GMAIL LINK + VERIFY ===== */
+.gm-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.gm-row:first-of-type{border-top:0}
+.gm-badge{display:inline-block;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;color:#fff;white-space:nowrap}
+.gm-form{display:flex;gap:8px;margin-top:10px}
+.gm-form input{flex:1;min-width:0}
+.gm-form .btn{width:auto;padding:0 18px;white-space:nowrap}
+#gHost{margin:10px 0 4px;min-height:44px}
+.gm-nudge{display:flex;align-items:center;gap:12px}
+.gm-nudge>span{font-size:26px}
+#gmCard details{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+#gmCard summary{cursor:pointer;color:var(--mut);font-size:13px}
+#gmCard ol{margin:8px 0;padding-left:18px;line-height:1.6}
+</style>
+<script>
+/* ===== Link a Gmail account in Settings + verify it with Google ===== */
+(function () {
+  const GOOGLE_CLIENT_ID = ''; /* optional: paste your OAuth Web client ID here, or enter it in Settings > Login & Gmail > Setup */
+  const cid = () => String(db.gcid || GOOGLE_CLIENT_ID || '').trim();
+  const valid = e => /^[a-z0-9.]{6,30}(\+[a-z0-9._-]{1,20})?@(gmail|googlemail)\.com$/i.test(String(e || '').trim());
+  const canon = e => {
+    e = String(e || '').trim().toLowerCase();
+    const [l, d] = e.split('@');
+    if (!d) return e;
+    const dom = d == 'googlemail.com' ? 'gmail.com' : d;
+    return (dom == 'gmail.com' ? l.split('+')[0].replace(/\./g, '') : l) + '@' + dom;};
+  let nonce = '',
+    note = '',
+    gsi = null;
+
+  function card(u) {
+    const g = u.gmail && u.gmail.addr ? u.gmail : null;
+    let body;
+    if (!g) {
+      body = `<div class="gm-form"><input id="gmIn" type="email" inputmode="email" placeholder="yourname@gmail.com" autocomplete="email" maxlength="64"><button class="btn" data-gm="link">Link Gmail</button></div>
+  <div class="mut small" style="margin-top:8px">Only @gmail.com addresses can be linked. You'll verify it with Google in the next step.</div>`;
+    } else {
+      body = `<div class="gm-row"><span>📧 <b>${esc(g.addr)}</b></span><span class="gm-badge" style="background:${g.verified ? '#10b981' : '#f59e0b'}">${g.verified ? '✅ Verified' : '⚠️ Not verified'}</span></div>
+  ${g.verified ? `<div class="mut small">Verified with Google on ${new Date(g.at).toLocaleDateString()}.</div>` : `<div class="mut small" style="margin-top:6px">Sign in with this Gmail account to prove it's yours:</div><div id="gHost"></div>`}
+  <div class="deck-btns" style="margin-top:6px"><button class="pill" data-gm="unlink">${g.verified ? 'Unlink Gmail' : 'Change / remove'}</button></div>`;}
+    return `<div class="card nofloat" id="gmCard"><h3 style="margin:0 0 4px;font-size:19px">🔐 Login &amp; Gmail</h3>
+  <div class="mut small" style="margin-bottom:8px">Link your Gmail account so we know this login really belongs to you.</div>
+  <div class="gm-row"><span class="mut small">Username</span><b>${esc(u.name)}</b></div>
+  ${body}
+  <div class="err" id="gmNote" style="min-height:0">${esc(note)}</div>
+  <details><summary>One-time Google setup</summary>
+   <ol class="mut small"><li>In Google Cloud Console, create an <b>OAuth client ID</b> of type <b>Web application</b>.</li><li>Add the web address where you open AstroQuest as an <b>Authorized JavaScript origin</b> (it must be https, or http://localhost).</li><li>Paste the client ID below.</li></ol>
+   <div class="gm-form"><input id="gmCid" placeholder="1234-abc.apps.googleusercontent.com" value="${esc(cid())}" autocomplete="off"><button class="pill" data-gm="cid">Save</button></div></details></div>`;}
+
+  const gmWrap = settingsTab;
+  settingsTab = function (u) {
+    const h = gmWrap(u),
+      i = h.indexOf('<div class="card nofloat" id="themesCard"');
+    return i < 0 ? h + card(u) : h.slice(0, i) + card(u) + h.slice(i);};
+
+  window.gmNudge = u => {
+    if (tab != 'quests') return '';
+    const g = u.gmail;
+    if (g && g.verified) return '';
+    try {
+      if (localStorage.getItem('qgmnudge:' + db.cur) == today()) return '';
+    } catch (e) {}
+    return `<div class="card nofloat gm-nudge"><span>📧</span><div class="grow"><b>${g && g.addr ? 'Verify your Gmail' : 'Link your Gmail'}</b><div class="mut small">${g && g.addr ? 'Finish verifying ' + esc(g.addr) + ' to secure your login.' : 'Add and verify a Gmail account to secure your login.'}</div></div><button class="pill" data-gm="goto">${g && g.addr ? 'Verify' : 'Link now'}</button><button class="x" data-gm="dismiss" title="Hide for today">×</button></div>`;};
+
+  /* ---- Google sign-in (Google Identity Services) ---- */
+  const hasG = () => !!(window.google && google.accounts && google.accounts.id);
+  function loadGsi() {
+    if (hasG()) return Promise.resolve();
+    if (gsi) return gsi;
+    gsi = new Promise((ok, no) => {
+      const s = document.createElement('script');
+      s.src = 'https://accounts.google.com/gsi/client';
+      s.async = true;
+      s.onload = () => (hasG() ? ok() : no(new Error('no gsi')));
+      s.onerror = () => no(new Error('load'));
+      document.head.appendChild(s);
+      setTimeout(() => no(new Error('timeout')), 9000);});
+    gsi.catch(() => {
+      gsi = null;});
+    return gsi;}
+  const say = m => {
+    note = m || '';
+    const n = document.getElementById('gmNote');
+    if (n) n.textContent = note;};
+  async function mount() {
+    const u = me();
+    if (!u || !u.gmail || u.gmail.verified || !document.getElementById('gHost')) return;
+    if (!cid()) {
+      document.getElementById('gHost').innerHTML = '<div class="mut small">Google verification needs the one-time setup below (a Google client ID).</div>';
+      return;}
+    document.getElementById('gHost').innerHTML = '<div class="mut small">Loading Google…</div>';
+    try {
+      await loadGsi();
+    } catch (e) {
+      const h = document.getElementById('gHost');
+      if (h) h.innerHTML = '<div class="mut small">Couldn\'t reach Google. Check your connection, then reopen Settings.</div>';
+      return;}
+    const host = document.getElementById('gHost');
+    if (!host) return;
+    nonce = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    google.accounts.id.initialize({client_id: cid(), callback: r => onCred(r && r.credential), nonce, auto_select: false, cancel_on_tap_outside: true});
+    host.innerHTML = '';
+    google.accounts.id.renderButton(host, {theme: 'outline', size: 'large', text: 'continue_with', shape: 'pill', width: 260});}
+  function onCred(cred) {
+    const u = me();
+    if (!u || !u.gmail) return;
+    let p;
+    try {
+      const b = String(cred).split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      p = JSON.parse(decodeURIComponent(escape(atob(b + '='.repeat((4 - (b.length % 4)) % 4)))));
+    } catch (e) {
+      return say('Verification failed. Please try again.');}
+    const bad = !p || !/^(https:\/\/)?accounts\.google\.com$/.test(p.iss || '') || p.aud !== cid() || !(p.exp * 1000 > Date.now()) || p.nonce !== nonce;
+    if (bad) return say('Verification failed. Please try again.');
+    if (p.email_verified !== true) return say('Google says that email address is not verified.');
+    if (canon(p.email) !== canon(u.gmail.addr)) return say('You signed in as ' + p.email + ', which is not the Gmail you linked (' + u.gmail.addr + ').');
+    u.gmail.verified = true;
+    u.gmail.at = Date.now();
+    if (p.sub) u.gmail.sub = String(p.sub);
+    note = '';
+    save();
+    try {
+      confetti(innerWidth / 2, innerHeight / 3, 80);
+      sfx.ok();
+    } catch (e) {}
+    toast('Gmail verified ✅');
+    render();}
+  window.__gmOnCred = onCred; /* used by tests */
+
+  /* ---- events ---- */
+  document.addEventListener('click', e => {
+    const el = e.target.closest && e.target.closest('[data-gm]'),
+      u = me();
+    if (!el || !u) return;
+    const a = el.dataset.gm;
+    if (a == 'link') {
+      const i = document.getElementById('gmIn'),
+        v = i ? i.value.trim() : '';
+      if (!valid(v)) return say('Enter a valid Gmail address (like yourname@gmail.com).');
+      const dup = Object.values(db.users).find(x => x !== u && x.gmail && canon(x.gmail.addr) == canon(v));
+      if (dup) return say('That Gmail is already linked to another player on this device.');
+      u.gmail = {addr: v.toLowerCase(), verified: false, at: Date.now()};
+      note = '';
+      save();
+      render();
+      toast('Gmail linked. Now verify it with Google.');
+    } else if (a == 'unlink') {
+      if (confirm('Remove the linked Gmail from this account?')) {
+        delete u.gmail;
+        note = '';
+        save();
+        render();}
+    } else if (a == 'cid') {
+      const i = document.getElementById('gmCid');
+      db.gcid = i ? i.value.trim() : '';
+      save();
+      render();
+      toast(db.gcid ? 'Client ID saved.' : 'Client ID cleared.');
+    } else if (a == 'goto') {
+      tab = 'settings';
+      render();
+    } else if (a == 'dismiss') {
+      try {
+        localStorage.setItem('qgmnudge:' + db.cur, today());
+      } catch (er) {}
+      render();}});
+  document.addEventListener('keydown', e => {
+    if (e.key == 'Enter' && e.target.id == 'gmIn') {
+      e.preventDefault();
+      const b = document.querySelector('[data-gm=link]');
+      if (b) b.click();}});
+
+  const _r = render;
+  render = function () {
+    _r();
+    if (tab == 'settings') setTimeout(mount, 0);};
+  render();
+})();</script>
+
+  <style>
+.fp-sub{margin:-2px 0 10px}
+.auth details,#fpSet details{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;text-align:left}
+.auth summary,#fpSet summary{cursor:pointer;color:var(--mut);font-size:13px}
+.auth details ol,#fpSet details ol{margin:8px 0;padding-left:18px;line-height:1.6}
+.auth details input,#fpSet details input{margin-bottom:6px}
+</style>
+<script>
+/* ===== Forgot password: email a 6-digit reset code to the player's verified Gmail ===== */
+(function () {
+  /* Optional: paste your EmailJS details here, or enter them in the app (Forgot password > One-time email setup). */
+  const EMAILJS_DEFAULT = {s: 'service_jt6fysh', t: 'template_czqstxr', k: 'USJifMiG5D8QdJ1wy'}; /* service ID, template ID, public key */
+  const ej = () => Object.assign({}, EMAILJS_DEFAULT, db.ejs || {});
+  const ejOk = () => {
+    const c = ej();
+    return !!(c.s && c.t && c.k);};
+  const rnd6 = () => {
+    const a = new Uint32Array(1);
+    crypto.getRandomValues(a);
+    return String(a[0] % 1000000).padStart(6, '0');};
+  const sha = async s => {
+    if (window.crypto && crypto.subtle && window.TextEncoder) {
+      const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+      return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');}
+    return hash(s);};
+  const mask = e => {
+    const p = String(e).split('@');
+    return p[0].slice(0, 2) + '•••@' + p[1];};
+  let fp = null,
+    busy = false,
+    lastSend = 0;
+
+  function setup() {
+    const c = ej();
+    return `<details><summary>One-time email setup (EmailJS)</summary>
+  <ol class="mut small"><li>Create a free account at <b>emailjs.com</b> and add an <b>Email Service</b> (for example your Gmail).</li><li>Create an <b>Email Template</b>. Set <b>To Email</b> to <code>{{to_email}}</code> and put <code>{{code}}</code> in the message (you can also use <code>{{to_name}}</code> and <code>{{app_name}}</code>).</li><li>Copy the <b>Service ID</b>, <b>Template ID</b> and your <b>Public Key</b> below. Open AstroQuest from a web address (https or localhost) so EmailJS accepts the request.</li></ol>
+  <input id="ejS" placeholder="Service ID" value="${esc(c.s || '')}" autocomplete="off"><input id="ejT" placeholder="Template ID" value="${esc(c.t || '')}" autocomplete="off"><input id="ejK" placeholder="Public key" value="${esc(c.k || '')}" autocomplete="off"><button class="pill" data-fp="ejsave">Save</button></details>`;}
+
+  const _auth = auth;
+  auth = function () {
+    if (!fp) {
+      const h = _auth();
+      return mode == 'login' ? h.replace('<p class="mut small">Accounts are saved', '<p class="small fp-sub"><a data-fp="open">Forgot password?</a></p><p class="mut small">Accounts are saved') : h;}
+    const msg = `<div class="err">${esc(fp.msg || '')}</div>`;
+    const head = `<div class="card auth"><h1><span class="rkt rkt-lg">${ROCKET}</span> <span class="grad">Reset password</span></h1>`;
+    if (fp.step == 0) {
+      return head + `<p class="mut">Enter your username and we'll email a 6-digit code to the Gmail linked to it.</p>
+ <input id="fpUn" placeholder="Username" maxlength="16" autocomplete="username" value="${esc(fp.un || '')}">
+ ${msg}<button class="btn" data-fp="send">${busy ? 'Sending…' : 'Email me a code'}</button>
+ <p class="mut small"><a data-fp="back">← Back to log in</a></p></div>`;}
+    return head + `<p class="mut">We sent a code to <b>${esc(fp.to)}</b>. It expires in 10 minutes. Check your spam folder if you don't see it.</p>
+ <input id="fpCode" placeholder="6-digit code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" value="${esc(fp.c || '')}">
+ <input id="fpPw" type="password" placeholder="New password (6+ characters)" autocomplete="new-password" value="${esc(fp.p || '')}">
+ ${msg}<button class="btn" data-fp="reset">Set new password</button>
+ <p class="mut small"><a data-fp="resend">Send a new code</a> · <a data-fp="back">← Back to log in</a></p></div>`;}
+
+  function say(m) {
+    if (fp) fp.msg = m || '';
+    render();
+    setTimeout(() => {
+      const i = document.querySelector('#fpCode,#fpUn');
+      if (i && !i.value) i.focus();
+    }, 0);}
+
+  async function send() {
+    if (busy) return;
+    const k = String((fp.un || '').trim()).toLowerCase(),
+      u = k && db.users[k];
+    if (!k) return say('Enter your username.');
+    if (!u) return say('No player with that username on this device.');
+    if (!(u.gmail && u.gmail.verified)) return say('This account has no verified Gmail, so a reset email can\'t be sent. Log in and verify one in Settings > Login & Gmail.');
+    if (!ejOk()) return say('Email sending isn\'t set up yet. Open "One-time email setup" below and save your EmailJS details.');
+    const wait = 60000 - (Date.now() - lastSend);
+    if (wait > 0) return say('Please wait ' + Math.ceil(wait / 1000) + 's before requesting another code.');
+    const c = ej(),
+      code = rnd6();
+    busy = true;
+    say('');
+    try {
+      const r = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({service_id: c.s, template_id: c.t, user_id: c.k, template_params: {to_email: u.gmail.addr, to_name: u.name, code, app_name: 'AstroQuest'}})});
+      if (!r.ok) throw new Error((await r.text()) || 'send failed');
+      lastSend = Date.now();
+      fp.h = await sha(code + '|' + k);
+      fp.exp = Date.now() + 10 * 60000;
+      fp.tries = 0;
+      fp.to = mask(u.gmail.addr);
+      fp.k = k;
+      fp.step = 1;
+      fp.c = '';
+      fp.p = '';
+      busy = false;
+      say('');
+    } catch (e) {
+      busy = false;
+      say('Couldn\'t send the email. Check your EmailJS details and internet connection.');}}
+
+  async function reset() {
+    if (!fp || !fp.h) return;
+    const u = db.users[fp.k];
+    if (!u) return say('That account no longer exists.');
+    if (Date.now() > fp.exp) {
+      fp.step = 0;
+      return say('That code expired. Request a new one.');}
+    if (fp.tries >= 5) {
+      fp.step = 0;
+      return say('Too many wrong tries. Request a new code.');}
+    const code = (fp.c || '').trim(),
+      pw = fp.p || '';
+    if (!/^\d{6}$/.test(code)) return say('Enter the 6-digit code from the email.');
+    if (pw.length < 6) return say('Choose a password with at least 6 characters.');
+    fp.tries++;
+    if ((await sha(code + '|' + fp.k)) !== fp.h) return say('That code is wrong. ' + (5 - fp.tries) + ' tries left.');
+    u.pw = hash(pw);
+    const wasOnline = !!u.cloud;
+    save();
+    form = {un: u.name, pw: ''};
+    fp = null;
+    mode = 'login';
+    err = 'Password updated. Log in with your new password.';
+    render();
+    toast(wasOnline ? 'Password updated. Online sync may ask you to reconnect.' : 'Password updated ✅');}
+
+  document.addEventListener('click', e => {
+    const el = e.target.closest && e.target.closest('[data-fp]');
+    if (!el) return;
+    const a = el.dataset.fp;
+    if (a == 'open') {
+      fp = {step: 0, un: form.un || '', msg: ''};
+      render();
+    } else if (a == 'back') {
+      fp = null;
+      err = '';
+      render();
+    } else if (a == 'send') send();
+    else if (a == 'resend') {
+      fp.step = 0;
+      fp.h = '';
+      fp.msg = '';
+      render();
+    } else if (a == 'reset') reset();
+    else if (a == 'ejsave') {
+      const g = id => ((document.getElementById(id) || {}).value || '').trim();
+      db.ejs = {s: g('ejS'), t: g('ejT'), k: g('ejK')};
+      save();
+      toast(ejOk() ? 'Email setup saved ✅' : 'Email setup cleared.');
+      if (fp) say('');
+      else render();}});
+  document.addEventListener('input', e => {
+    if (!fp) return;
+    if (e.target.id == 'fpUn') fp.un = e.target.value;
+    if (e.target.id == 'fpCode') fp.c = e.target.value.replace(/\D/g, '').slice(0, 6);
+    if (e.target.id == 'fpPw') fp.p = e.target.value;});
+  document.addEventListener('keydown', e => {
+    if (e.key != 'Enter' || !fp) return;
+    if (e.target.id == 'fpUn') {
+      e.preventDefault();
+      send();
+    } else if (e.target.id == 'fpCode' || e.target.id == 'fpPw') {
+      e.preventDefault();
+      reset();}});
+
+  /* Settings: let a logged-in player store the email-sending details too */
+  const _st = settingsTab;
+  settingsTab = function (u) {
+    const h = _st(u),
+      i = h.indexOf('<div class="card nofloat" id="themesCard"'),
+      c = `<div class="card nofloat" id="fpSet"><h3 style="margin:0 0 4px;font-size:19px">🔑 Password recovery email</h3><div class="mut small">${u.gmail && u.gmail.verified ? 'If you forget your password, a reset code will be emailed to ' + esc(mask(u.gmail.addr)) + '.' : 'Link and verify a Gmail above to enable "Forgot password?" for this account.'}</div>${setup()}</div>`;
+    return i < 0 ? h + c : h.slice(0, i) + c + h.slice(i);};
+
   render();
 })();</script>
 
