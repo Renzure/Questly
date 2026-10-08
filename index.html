@@ -7520,7 +7520,7 @@ function deadlineCard(u) {
 <script>
 /* ===== Link a Gmail account in Settings + verify it with Google ===== */
 (function () {
-  const GOOGLE_CLIENT_ID = ''; /* optional: paste your OAuth Web client ID here, or enter it in Settings > Login & Gmail > Setup */
+  const GOOGLE_CLIENT_ID = '914666940436-cdoml6tu2h95u19fv5j54m7r5iuhst0a.apps.googleusercontent.com'; /* optional: paste your OAuth Web client ID here, or enter it in Settings > Login & Gmail > Setup */
   const cid = () => String(db.gcid || GOOGLE_CLIENT_ID || '').trim();
   const valid = e => /^[a-z0-9.]{6,30}(\+[a-z0-9._-]{1,20})?@(gmail|googlemail)\.com$/i.test(String(e || '').trim());
   const canon = e => {
@@ -7631,6 +7631,7 @@ function deadlineCard(u) {
     toast('Gmail verified ✅');
     render();}
   window.__gmOnCred = onCred; /* used by tests */
+  window.__gmCid = cid;
 
   /* ---- events ---- */
   document.addEventListener('click', e => {
@@ -7854,6 +7855,81 @@ function deadlineCard(u) {
       c = `<div class="card nofloat" id="fpSet"><h3 style="margin:0 0 4px;font-size:19px">🔑 Password recovery email</h3><div class="mut small">${u.gmail && u.gmail.verified ? 'If you forget your password, a reset code will be emailed to ' + esc(mask(u.gmail.addr)) + '.' : 'Link and verify a Gmail above to enable "Forgot password?" for this account.'}</div>${setup()}</div>`;
     return i < 0 ? h + c : h.slice(0, i) + c + h.slice(i);};
 
+  render();
+})();</script>
+
+  <style>
+.gm-lock .tabs{display:none}
+.gm-gate{border:2px solid #f59e0b}
+</style>
+<script>
+/* ===== Gmail required: sign up with Gmail, and existing accounts must link (and verify) one ===== */
+(function () {
+  const valid = e => /^[a-z0-9.]{6,30}(\+[a-z0-9._-]{1,20})?@(gmail|googlemail)\.com$/i.test(String(e || '').trim());
+  const canon = e => {
+    e = String(e || '').trim().toLowerCase();
+    const [l, d] = e.split('@');
+    if (!d) return e;
+    const dom = d == 'googlemail.com' ? 'gmail.com' : d;
+    return (dom == 'gmail.com' ? l.split('+')[0].replace(/\./g, '') : l) + '@' + dom;};
+  let gmSu = '';
+  const needVerify = () => !!(window.__gmCid && window.__gmCid());
+  const locked = u => {
+    const g = u && u.gmail;
+    return !(g && g.addr) || (needVerify() && !g.verified);};
+
+  /* signup form: add a Gmail field */
+  const _auth = auth;
+  auth = function () {
+    const h = _auth();
+    return mode == 'signup' && h.indexOf('id="un"') > -1 && h.indexOf('data-fp') < 0 && h.indexOf('Reset password') < 0
+      ? h.replace('<div class="avs">', `<input id="gmSu" type="email" inputmode="email" placeholder="Your Gmail (yourname@gmail.com)" autocomplete="email" maxlength="64" value="${esc(gmSu)}"><div class="avs">`)
+      : h;};
+  document.addEventListener('input', e => {
+    if (e.target.id == 'gmSu') gmSu = e.target.value;});
+
+  /* validate before the original signup handler runs, then attach the Gmail to the new account */
+  document.addEventListener('click', e => {
+    const el = e.target.closest && e.target.closest('[data-act="go"]');
+    if (!el || mode != 'signup' || !document.getElementById('gmSu')) return;
+    const n = form.un.trim(),
+      k = n.toLowerCase(),
+      v = gmSu.trim();
+    if (!n || !form.pw) return;
+    if (db.users[k]) return;
+    if (!valid(v)) {
+      e.stopImmediatePropagation();
+      err = 'Sign up with a Gmail address (like yourname@gmail.com).';
+      return render();}
+    if (Object.values(db.users).some(x => x.gmail && canon(x.gmail.addr) == canon(v))) {
+      e.stopImmediatePropagation();
+      err = 'That Gmail is already used by another player on this device.';
+      return render();}
+    setTimeout(() => {
+      const u = db.users[k];
+      if (u && !u.gmail) {
+        u.gmail = {addr: v.toLowerCase(), verified: false, at: Date.now()};
+        gmSu = '';
+        save();
+        render();}
+    }, 0);
+  }, true);
+
+  /* lock the app to Settings until a Gmail is linked (and verified, when Google verification is set up) */
+  const _st = settingsTab;
+  settingsTab = function (u) {
+    const h = _st(u);
+    if (!locked(u)) return h;
+    const g = u.gmail && u.gmail.addr;
+    return `<div class="card nofloat gm-gate"><b>📧 ${g ? 'Verify your Gmail to continue' : 'Link your Gmail to continue'}</b><div class="mut small" style="margin-top:4px">${g ? 'Sign in with Google below to prove ' + esc(u.gmail.addr) + ' is yours.' : 'Every AstroQuest account needs a linked Gmail. Add yours in the Login &amp; Gmail card below.'}</div></div>` + h;};
+
+  const _r = render;
+  render = function () {
+    const u = me();
+    if (u && locked(u)) tab = 'settings';
+    _r();
+    const a = document.getElementById('app');
+    if (a) a.classList.toggle('gm-lock', !!(u && locked(u)));};
   render();
 })();</script>
 
