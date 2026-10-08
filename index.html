@@ -7762,7 +7762,7 @@ function deadlineCard(u) {
       const r = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({service_id: c.s, template_id: c.t, user_id: c.k, template_params: {to_email: u.gmail.addr, to_name: u.name, code, app_name: 'AstroQuest'}})});
+        body: JSON.stringify({service_id: c.s, template_id: c.t, user_id: c.k, template_params: {to_email: u.gmail.addr, email: u.gmail.addr, user_email: u.gmail.addr, recipient: u.gmail.addr, reply_to: u.gmail.addr, to_name: u.name, name: u.name, code, app_name: 'AstroQuest'}})});
       if (!r.ok) {
         const t = ((await r.text()) || '').trim().slice(0, 140);
         const er = new Error(t || 'send failed');
