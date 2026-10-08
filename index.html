@@ -1565,25 +1565,16 @@ const spSrc=c=>'https://open.spotify.com/embed/'+c.type+'/'+c.id+'?utm_source=ge
 function musicTab(u){
  const m=u.music=u.music||{cur:null,saved:[]};m.saved=m.saved||[];
  const cur=m.cur,same=(a,b)=>a&&b&&a.id==b.id&&a.type==b.type;
- return `<div class="card nofloat"><h3 style="margin:0 0 6px;font-size:19px">🎧 Study Music</h3>
-  <div class="mut small">Type a song title, hit Search, and the top match starts playing.</div>
-  ${(cur||TC)?`<div class="row" style="margin-top:6px"><span><span class="eq"><i></i><i></i><i></i><i></i></span> &nbsp;Now playing: <b>${esc((cur||TC).name)}</b></span></div>`:''}
-  <div class="add" style="margin-top:10px"><input id="muQ" placeholder="Type a song title..." value="${esc(MS.q)}" autocomplete="off" maxlength="80"><button class="pill" data-mu="search" ${MS.busy?'disabled':''}>${MS.busy?'Searching…':'🔍 Search'}</button></div>
-  ${MS.err?`<div class="reviewer-note" style="color:#e5484d">${esc(MS.err)}</div>`:''}
-  ${MS.res.length?`<ul>${MS.res.map((r,i)=>`<li><img src="${esc(r.art||'')}" alt="" style="width:48px;height:48px;border-radius:10px;flex:none;background:var(--line)"><div class="grow"><b>${esc(r.name)}</b><div class="mut small">${esc(r.artist)}</div></div><button class="pill" data-mu="rplay" data-v="${i}">▶ Play</button><button class="ghost" data-mu="rsave" data-v="${i}" title="Save to my music">＋</button></li>`).join('')}</ul>`:''}
-  ${db.ytKey?'':`<div class="reviewer-note">Right now songs play as 30-second previews.</div>
-  <details style="margin-top:10px"><summary class="mut small" style="cursor:pointer">🔑 Turn on full songs (free YouTube key, 3 minutes)</summary>
-   <ol class="small" style="padding-left:20px;line-height:1.7">
-    <li>Open <b>console.cloud.google.com</b> and pick your Firebase project (or create one).</li>
-    <li><b>APIs &amp; Services → Library</b> → search <b>YouTube Data API v3</b> → Enable.</li>
-    <li><b>Credentials → Create credentials → API key</b>.</li>
-    <li>Open the key, under <b>Website restrictions</b> add your Questly address (for example <b>questly-mu-eight.vercel.app/*</b>), and under <b>API restrictions</b> choose YouTube Data API v3. Save.</li>
-    <li>Paste the key below.</li>
-   </ol>
-   <input id="muKey" placeholder="YouTube Data API key" autocomplete="off"><button class="pill" data-mu="ytsave">Save key</button></details>`}</div>
+ return `<div class="card nofloat"><h3 style="margin:0 0 6px;font-size:19px">🎧 Study Music <span class="sp-badge">Spotify</span></h3>
+  <div class="mut small">Play Spotify right inside Questly. The player stays on screen while you switch tabs, so it keeps playing during your focus sessions.</div>
+  ${cur?`<div class="row" style="margin-top:6px"><span><span class="eq"><i></i><i></i><i></i><i></i></span> &nbsp;Now playing: <b>${esc(cur.name)}</b></span></div>`:''}
+  <input id="muUrl" placeholder="Paste a Spotify link (playlist, album, track, podcast)" autocomplete="off">
+  <input id="muName" placeholder="Name (optional, for saving)" maxlength="40">
+  <div class="deck-btns"><button class="pill" data-mu="play">▶ Play</button><button class="ghost" data-mu="save">＋ Save to my music</button></div>
+  <div class="reviewer-note">Tip: log in to Spotify in this browser to hear full songs. Without a login, Spotify only plays 30-second previews.</div></div>
  <div class="card nofloat"><b>Study mixes</b><div class="mixes">${MIXES.map((x,i)=>`<button class="mix${same(cur,{type:x[2],id:x[3]})?' on':''}" style="background:linear-gradient(135deg,${x[4]})" data-mu="mix" data-v="${i}"><span>${x[0]}</span>${esc(x[1])}</button>`).join('')}</div></div>
  <div class="card nofloat"><div class="row"><b>My music</b><span class="mut small">${m.saved.length} saved</span></div>
-  <ul>${m.saved.length?m.saved.map((x,i)=>`<li><span style="font-size:24px">🎵</span><div class="grow"><b>${esc(x.name)}</b><div class="mut small">${x.type=='yt'?'YouTube':x.type=='preview'?'30s preview':x.type}</div></div><button class="pill" data-mu="splay" data-v="${i}">▶ Play</button><button class="x" data-mu="sdel" data-v="${i}">×</button></li>`).join(''):'<li class="empty">🎶<br>Paste a link above and save it to build your own library.</li>'}</ul></div>`;
+  <ul>${m.saved.length?m.saved.map((x,i)=>`<li><span style="font-size:24px">🎵</span><div class="grow"><b>${esc(x.name)}</b><div class="mut small">${x.type}</div></div><button class="pill" data-mu="splay" data-v="${i}">▶ Play</button><button class="x" data-mu="sdel" data-v="${i}">×</button></li>`).join(''):'<li class="empty">🎶<br>Paste a link above and save it to build your own library.</li>'}</ul></div>`;
 }
 (function(){
  function mini(){
@@ -1595,7 +1586,7 @@ function musicTab(u){
   el.querySelector('b').textContent=c.name;
   const src=spSrc(c),f=el.querySelector('iframe');if(f.dataset.src!==src){f.dataset.src=src;f.src=src}
  }
- function play(c){tstop();const u=me();u.music.cur=c;save();render();toast('🎧 Loaded '+c.name+'. Press play in the player!');sfx.pop()}
+ function play(c){const u=me();u.music.cur=c;save();render();toast('🎧 Loaded '+c.name+'. Press play in the player!');sfx.pop()}
  const _r=render;render=function(){_r();mini();const ft=document.querySelector('.ft');if(ft&&!ft.querySelector('.alarm-test')){const b=document.createElement('button');b.className='ghost alarm-test';b.textContent='🔔 Test alarm sound';ft.appendChild(b)}};
  document.addEventListener('click',e=>{
   const mm=e.target.closest&&e.target.closest('[data-m]');
@@ -1607,7 +1598,7 @@ function musicTab(u){
   const b=e.target.closest&&e.target.closest('[data-mu]');if(!b)return;
   const u=me();if(!u)return;const m=u.music=u.music||{cur:null,saved:[]},k=b.dataset.mu,v=b.dataset.v;
   if(k=='mix'){const x=MIXES[+v];play({type:x[2],id:x[3],name:x[1]})}
-  else if(k=='splay'){const x=m.saved[+v];if(x)(x.type=='preview'||x.type=='yt')?tplay(x):play(x)}
+  else if(k=='splay')play(m.saved[+v]);
   else if(k=='sdel'){m.saved.splice(+v,1);save();render()}
   else if(k=='play'||k=='save'){
    const c=spParse(document.getElementById('muUrl').value);
@@ -1617,7 +1608,7 @@ function musicTab(u){
    else{if(m.saved.some(x=>x.id==c.id)){toast('Already saved.');return}m.saved.unshift(c);save();render();toast('Saved! 🎵');sfx.ok()}
   }
  });
- document.addEventListener('keydown',e=>{if(e.key=='Enter'&&e.target.id=='muQ')msearch()});
+ document.addEventListener('keydown',e=>{if(e.key=='Enter'&&e.target.id=='muUrl'){const b=document.querySelector('[data-mu=play]');if(b)b.click()}});
  render();
 })();
 </script>
@@ -2134,6 +2125,74 @@ function buddySay(msg,ms){
  const b=document.getElementById('bdBub');if(!b)return;
  b.textContent=msg;b.classList.add('show');clearTimeout(bdTimer);bdTimer=setTimeout(()=>b.classList.remove('show'),ms||3800);
 }
+/* Pet voice: a species call (meow / growl / warble / peep) followed by cute babble that matches the typed words */
+function petVoice(u,text){
+ const pt=pget(u),h=phap(pt),st=bStage(lvl(u.xp)),line=pt.line||'cat';
+ let a;
+ try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();a=AC;if(a.state=='suspended')a.resume()}catch(e){return 0}
+ const mood=h>=70?1.12:h>=40?1:h>=15?.9:.8;
+ const base=({dragon:200,cat:340,cosmo:430}[line]||340)*(1.3-st*.09)*mood;
+ const t0=a.currentTime+.03;
+ const out=a.createGain();out.gain.value=1;
+ const lim=a.createDynamicsCompressor();out.connect(lim);lim.connect(a.destination);
+ const env=(g,t,at,dur,vol)=>{g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+at);g.gain.exponentialRampToValueAtTime(.0001,t+dur)};
+ const note=(o)=>{
+  const osc=a.createOscillator(),g=a.createGain();
+  osc.type=o.type||'triangle';
+  osc.frequency.setValueAtTime(o.f0,o.t);
+  if(o.f1)osc.frequency.exponentialRampToValueAtTime(o.f1,o.t+o.dur*(o.mid||1));
+  if(o.f2)osc.frequency.exponentialRampToValueAtTime(o.f2,o.t+o.dur);
+  let node=osc;
+  if(o.lp||o.bp){const f=a.createBiquadFilter();f.type=o.bp?'bandpass':'lowpass';f.frequency.setValueAtTime(o.bp||o.lp,o.t);if(o.bp1)f.frequency.linearRampToValueAtTime(o.bp1,o.t+o.dur*.5);if(o.bp2)f.frequency.linearRampToValueAtTime(o.bp2,o.t+o.dur);if(o.bp)f.Q.value=o.q||4;osc.connect(f);node=f}
+  if(o.vib){const l=a.createOscillator(),lg=a.createGain();l.frequency.value=o.vib;lg.gain.value=o.vibd||o.f0*.03;l.connect(lg);lg.connect(osc.frequency);l.start(o.t);l.stop(o.t+o.dur+.05)}
+  if(o.trem){const l=a.createOscillator(),lg=a.createGain();l.frequency.value=o.trem;lg.gain.value=(o.vol||.1)*.6;l.connect(lg);lg.connect(g.gain);l.start(o.t);l.stop(o.t+o.dur+.05)}
+  env(g,o.t,o.at||.02,o.dur,o.vol||.12);
+  node.connect(g);g.connect(out);osc.start(o.t);osc.stop(o.t+o.dur+.05);
+ };
+ let call=.5;
+ if(st==0){
+  /* egg: tiny peeps */
+  for(let i=0;i<3;i++)note({t:t0+i*.13,type:'sine',f0:base*3.4,f1:base*4.6,dur:.09,vol:.1,at:.01});
+  call=.45;
+ }else if(line=='cat'){
+  /* mee-ow */
+  note({t:t0,type:'sawtooth',f0:base*1.1,f1:base*1.9,f2:base*1.0,mid:.35,dur:.62,vol:.09,bp:900,bp1:1900,bp2:700,q:3,vib:6,vibd:base*.035,at:.06});
+  call=.72;
+ }else if(line=='dragon'){
+  /* rumbling growl then a squeak */
+  note({t:t0,type:'sawtooth',f0:base*.55,f1:base*.75,f2:base*.5,mid:.5,dur:.45,vol:.14,lp:520,trem:24,at:.05});
+  note({t:t0+.42,type:'sine',f0:base*3,f2:base*5,dur:.16,vol:.08,at:.02});
+  call=.62;
+ }else{
+  /* alien warble */
+  note({t:t0,type:'sine',f0:base*1.6,f1:base*3.2,f2:base*2.2,mid:.5,dur:.55,vol:.1,vib:15,vibd:base*.45,at:.04});
+  call=.65;
+ }
+ /* babble: one little blip per letter, in step with the typing */
+ const chars=[...text],wave=line=='dragon'?'sawtooth':line=='cosmo'?'sine':'triangle',lp=line=='dragon'?900:2600;
+ const q=/\?\s*$/.test(text),ex=/!\s*$/.test(text);
+ const lastL=chars.map((c,i)=>/[a-z0-9]/i.test(c)?i:-1).filter(i=>i>=0).pop();
+ chars.forEach((c,i)=>{
+  if(!/[a-z0-9]/i.test(c))return;
+  const code=c.toLowerCase().charCodeAt(0),step=(code*7)%9;
+  let f=base*1.5*Math.pow(2,step/12);
+  if(q&&i>chars.length-4)f*=1+.12*(i-(chars.length-4));
+  if(ex&&i==lastL)f*=1.25;
+  const t=t0+call+i*.062;
+  note({t,type:wave,f0:f,f1:f*(i%3==0?1.12:.93),dur:.05,vol:.045,lp,at:.006});
+ });
+ return call;
+}
+function buddyTalk(u,msg){
+ const text=String(msg),bub=document.getElementById('bdBub');
+ clearTimeout(buddyTalk.st);clearTimeout(bdTimer);
+ const call=db.mute?0:petVoice(u,text);
+ if(bub){bub.textContent=text;bub.classList.add('show');bdTimer=setTimeout(()=>bub.classList.remove('show'),4200)}
+ const els=[...document.querySelectorAll('#buddy .bd-pet,.bd-big')];
+ els.forEach(e=>{e.classList.remove('talk');void e.offsetWidth;e.classList.add('talk')});
+ const ms=db.mute?1400:Math.min(5000,(call+[...text].length*.062)*1000+250);
+ buddyTalk.st=setTimeout(()=>els.forEach(e=>e.classList.remove('talk')),ms);
+}
 function buddyQuip(u){
  const p=pget(u),h=phap(p),n=p.name,t=today(),active=(u.active||[]).includes(t);
  if(h<25)return 'I\'m so hungry... feed me? 🍎';
@@ -2223,7 +2282,7 @@ function bdgStart(u){
  const _a=award;
  award=function(u,xp,msg,el){
   _a(u,xp,msg,el);
-  try{const p=u.pet;if(p&&p.line){let c=Math.max(1,Math.round(xp/4));if(phap(p)>=70)c=Math.round(c*1.5);p.coins+=c;buddyPaint();try{window.buddyAct&&window.buddyAct('cheer')}catch(e){}buddySay('+'+c+' 🪙 '+(c>=8?'Amazing work!':'Nice one!'),2600)}}catch(e){}
+  try{const p=u.pet;if(p&&p.line){let c=Math.max(1,Math.round(xp/4));if(phap(p)>=70)c=Math.round(c*1.5);p.coins+=c;buddyPaint();buddySay('+'+c+' 🪙 '+(c>=8?'Amazing work!':'Nice one!'),2600)}}catch(e){}
  };
  const _r=render;
  render=function(){
@@ -2237,12 +2296,8 @@ function bdgStart(u){
   else if(!p.line)return;
   else if(k=='pet'){
    p.pets=(p.pets||0)+1;p.hap=Math.min(100,phap(p)+1);p.hapT=Date.now();
-   const r=b.getBoundingClientRect();
-   for(let i=0;i<5;i++){const h=document.createElement('div');h.className='bd-heart';h.textContent=['💖','💛','💙','✨','💜'][i%5];h.style.left=(r.left+r.width/2+(Math.random()-.5)*40)+'px';h.style.top=(r.top+r.height*.3)+'px';h.style.setProperty('--dx',(Math.random()-.5)*60+'px');h.style.animationDelay=i*70+'ms';document.body.appendChild(h);setTimeout(()=>h.remove(),1300)}
-   const pe=document.querySelector('#buddy .bd-pet');if(pe){pe.classList.remove('jump');void pe.offsetWidth;pe.classList.add('jump')}
    if(p.pets%10==0){p.coins++;toast('🪙 +1 bonus coin for all the love!')}
-   sfx.pop();buddySay(buddyQuip(u));save();
-   if(tab=='buddy'){const big=document.querySelector('.bd-big');if(big){big.style.transform='scale(1.12)';setTimeout(()=>big.style.transform='',200)}}
+   buddyTalk(u,buddyQuip(u));save();
   }
   else if(k=='feed'){const f=FOOD[+v];if(!f||p.coins<f[2])return;p.coins-=f[2];p.hap=Math.min(100,phap(p)+f[3]);p.hapT=Date.now();save();render();sfx.ok();confetti(innerWidth/2,innerHeight/3,30);buddySay('Yum!! '+f[0]+' So tasty 😋')}
   else if(k=='hat'){const x=HATS[+v];if(!x)return;
@@ -2427,211 +2482,20 @@ function deadlineCard(u){
 })();
 </script>
 <style>
-#tmini{position:fixed;right:20px;bottom:20px;width:360px;max-width:calc(100vw - 24px);z-index:40;display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 12px;border-radius:22px;background:color-mix(in srgb,var(--card) 82%,transparent);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border:1px solid var(--line);box-shadow:0 18px 50px rgba(0,0,0,.35);animation:rise .5s cubic-bezier(.2,.8,.2,1)}
-#tmini img{width:44px;height:44px;border-radius:10px;flex:none;background:var(--line);object-fit:cover}
-#tmini .tinfo{flex:1;min-width:0;display:flex;flex-direction:column}
-#tmini .tinfo b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#tmini button{background:none;border:1px solid var(--line);color:var(--ink);border-radius:50%;width:38px;height:38px;cursor:pointer;font-size:16px;flex:none}
-#tmini button:hover{border-color:var(--blue)}
-#tmini .tyt{display:none;width:100%;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#000}
-#tmini .tyt iframe{width:100%;height:100%;border:0;display:block}
-#tmini.yt .tyt{display:block}
-#tmini.yt [data-t=pp]{display:none}
-#tmini.min .tyt{display:none}
-body:has(#tmini) #buddy{bottom:96px}
-body:has(#tmini.yt) #buddy{bottom:260px}
-body:has(#tmini):has(#mini) #tmini{bottom:auto;top:20px}
-@media (max-width:560px){#tmini{right:12px;left:12px;width:auto;bottom:12px}body:has(#tmini) #buddy{bottom:88px}body:has(#tmini.yt) #buddy{bottom:250px}}
+/* ===== BUDDY: still at rest, wiggles and bobs while talking ===== */
+.bd-pet,.bd-big{animation:none;transition:none}
+.bd-pet:hover,.bd-pet:active{transform:none}
+.bd-pet.jump{animation:none}
+.bd-heart{display:none!important}
+.bd-pet.talk,.bd-big.talk{animation:bdTalk .9s ease-in-out infinite}
+@keyframes bdTalk{
+ 0%,100%{transform:translateY(0) rotate(0)}
+ 15%{transform:translateY(-10px) rotate(-10deg)}
+ 30%{transform:translateY(0) rotate(9deg)}
+ 45%{transform:translateY(-10px) rotate(-8deg)}
+ 60%{transform:translateY(0) rotate(7deg)}
+ 78%{transform:translateY(-5px) rotate(-4deg)}
+}
 </style>
-<script>
-/* ===== Music: search by song title (YouTube full songs with a key, iTunes 30s previews without) ===== */
-var MS={q:'',res:[],busy:false,err:''},TC=null;
-const TA=new Audio();TA.preload='none';
-function tmini(){
- let el=document.getElementById('tmini');
- if(!TC){if(el)el.remove();return}
- if(!el){el=document.createElement('div');el.id='tmini';el.innerHTML='<img alt=""><div class="tinfo"><b></b><span class="mut small"></span></div><button data-t="pp" title="Play / pause">⏸</button><button data-t="min" title="Hide video">–</button><button data-t="x" title="Close">×</button><div class="tyt"></div>';document.body.appendChild(el)}
- el.classList.toggle('yt',!!TC.yt);
- el.querySelector('img').src=TC.art||'';
- el.querySelector('b').textContent=TC.title||TC.name;
- el.querySelector('.tinfo span').textContent=(TC.artist||'')+(TC.yt?'':' · 30s preview');
- el.querySelector('[data-t=pp]').textContent=TA.paused?'▶':'⏸';
- el.querySelector('[data-t=min]').style.display=TC.yt?'':'none';
- const box=el.querySelector('.tyt');
- if(TC.yt){
-  if(box.dataset.id!==TC.yt){box.dataset.id=TC.yt;box.innerHTML='<iframe src="https://www.youtube.com/embed/'+encodeURIComponent(TC.yt)+'?autoplay=1&playsinline=1&rel=0" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen title="Music player"></iframe>'}
- }else{box.dataset.id='';box.innerHTML=''}
-}
-function tstop(){try{TA.pause()}catch(e){}TC=null;tmini()}
-function tplay(c){
- const u=me();if(!u)return;
- if(u.music&&u.music.cur){u.music.cur=null;save()}
- try{TA.pause()}catch(e){}
- TC=c;
- if(!c.yt){
-  TA.src=c.url;
-  const pr=TA.play();
-  if(pr&&pr.catch)pr.catch(()=>toast('Tap ▶ on the player to start the song.'));
- }
- tmini();render();
-}
-TA.addEventListener('play',tmini);TA.addEventListener('pause',tmini);TA.addEventListener('ended',tmini);
-async function ytSearch(q){
- const r=await fetch('https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&videoCategoryId=10&maxResults=10&q='+encodeURIComponent(q)+'&key='+encodeURIComponent(db.ytKey));
- const j=await r.json().catch(()=>null);
- if(!r.ok){const m=(j&&j.error&&j.error.message)||('HTTP '+r.status),reason=j&&j.error&&j.error.errors&&j.error.errors[0]&&j.error.errors[0].reason;const e=new Error(m);e.reason=reason;throw e}
- const dec=t=>{const d=document.createElement('textarea');d.innerHTML=t;return d.value};
- return (j.items||[]).filter(x=>x.id&&x.id.videoId).map(x=>({yt:x.id.videoId,title:dec(x.snippet.title),name:dec(x.snippet.title)+' · '+dec(x.snippet.channelTitle),artist:dec(x.snippet.channelTitle),art:(x.snippet.thumbnails&&(x.snippet.thumbnails.default||{}).url)||''}));
-}
-async function itSearch(q){
- const r=await fetch('https://itunes.apple.com/search?media=music&entity=song&attribute=songTerm&limit=12&term='+encodeURIComponent(q));
- if(!r.ok)throw new Error('http');
- const j=await r.json();
- return (j.results||[]).filter(x=>x.previewUrl).map(x=>({title:x.trackName,name:x.trackName+' · '+x.artistName,artist:x.artistName,art:x.artworkUrl60||x.artworkUrl100||'',url:x.previewUrl}));
-}
-async function msearch(){
- const i=document.getElementById('muQ');if(i)MS.q=i.value;
- const q=MS.q.trim();
- if(!q){toast('Type a song title first.');return}
- if(MS.busy)return;
- MS.busy=true;MS.err='';render();
- let res=[],note='';
- if(db.ytKey){
-  try{res=await ytSearch(q)}
-  catch(e){
-   if(e.reason=='quotaExceeded')note='YouTube search limit reached for today, showing 30-second previews instead.';
-   else if(/API key|keyInvalid|referer|blocked|forbidden/i.test(e.message+(e.reason||'')))note='YouTube rejected your key ('+e.message.slice(0,90)+'). Showing previews instead.';
-   else note='YouTube search failed, showing previews instead.';
-  }
- }
- if(!res.length&&(!db.ytKey||note)){
-  try{res=await itSearch(q)}catch(e){note=(note?note+' ':'')+'Could not search right now. Check your internet.'}
- }
- MS.res=res;MS.err=note||(res.length?'':'No songs found for "'+q+'". Try a different title.');
- MS.busy=false;render();
- if(res.length&&tab=='music')tplay(res[0]);
-}
-(function(){
- const _r=render;
- render=function(){_r();if(!me())tstop();else tmini()};
- document.addEventListener('input',e=>{if(e.target.id=='muQ')MS.q=e.target.value});
- document.addEventListener('click',e=>{
-  const t=e.target.closest&&e.target.closest('[data-t]');
-  if(t){
-   const k=t.dataset.t;
-   if(k=='x')tstop();
-   else if(k=='min'){const el=document.getElementById('tmini');if(el)el.classList.toggle('min')}
-   else{TA.paused?TA.play().catch(()=>{}):TA.pause()}
-   return;
-  }
-  const b=e.target.closest&&e.target.closest('[data-mu]');if(!b||b.disabled)return;
-  const u=me();if(!u)return;const k=b.dataset.mu,v=+b.dataset.v;
-  if(k=='search')msearch();
-  else if(k=='ytsave'){const i=document.getElementById('muKey'),key=i?i.value.trim():'';if(!/^[\w-]{20,60}$/.test(key)){toast('That does not look like a YouTube API key.');return}db.ytKey=key;save();render();toast('Full songs are on! 🎶');sfx.ok()}
-  else if(k=='ytreset'){if(confirm('Remove your YouTube key? Search will go back to 30-second previews.')){db.ytKey='';save();render()}}
-  else if(k=='rplay'&&MS.res[v])tplay(MS.res[v]);
-  else if(k=='rsave'&&MS.res[v]){
-   const r=MS.res[v],m=u.music=u.music||{cur:null,saved:[]};m.saved=m.saved||[];
-   const id=r.yt||r.url;
-   if(m.saved.some(x=>x.id==id)){toast('Already saved.');return}
-   m.saved.unshift(r.yt?{type:'yt',id,yt:r.yt,name:r.name,title:r.title,artist:r.artist,art:r.art}:{type:'preview',id,url:r.url,name:r.name,title:r.title,artist:r.artist,art:r.art});
-   save();render();toast('Saved! 🎵');sfx.ok();
-  }
- });
- render();
-})();
-</script>
-<style>
-/* ===== BUDDY MOVEMENTS ===== */
-#buddy{will-change:transform}
-#buddy.lft{align-items:flex-start}
-.bd-e{display:inline-block;transition:transform .25s}
-#buddy.right .bd-e{transform:scaleX(-1)}
-.bd-pet.walk{animation:bdWalk .5s ease-in-out infinite}
-@keyframes bdWalk{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-13px) rotate(4deg)}}
-.bd-pet.spin{animation:bdSpin .8s cubic-bezier(.3,1.4,.5,1)}
-@keyframes bdSpin{0%{transform:translateY(0) rotate(0)}45%{transform:translateY(-34px) rotate(200deg) scale(1.15)}100%{transform:translateY(0) rotate(360deg)}}
-.bd-pet.wig{animation:bdWig .7s ease-in-out}
-@keyframes bdWig{0%,100%{transform:rotate(0)}20%{transform:rotate(-12deg)}40%{transform:rotate(12deg)}60%{transform:rotate(-8deg)}80%{transform:rotate(8deg)}}
-.bd-pet.sleep{animation:bdSleep 3.6s ease-in-out infinite;filter:drop-shadow(0 10px 14px rgba(0,0,0,.35)) saturate(.6) brightness(.9)}
-@keyframes bdSleep{50%{transform:translateY(3px) scale(1.04,.96) rotate(-6deg)}}
-.bd-pet.sleep::after{content:"💤";position:absolute;right:-8px;top:-18px;font-size:.38em;animation:bdZ 2.4s ease-in-out infinite}
-@keyframes bdZ{0%{transform:translate(0,6px) scale(.7);opacity:0}30%{opacity:1}100%{transform:translate(10px,-16px) scale(1.1);opacity:0}}
-@media (prefers-reduced-motion:reduce){.bd-pet.walk,.bd-pet.spin,.bd-pet.wig,.bd-pet.sleep,.bd-pet.sleep::after{animation:none!important}}
-</style>
-<script>
-/* ===== BUDDY MOVEMENTS: wandering, hopping, spinning, napping ===== */
-(function(){
- const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
- const BD={x:0,busy:false,sleep:false,last:Date.now(),next:Date.now()+5000,t:0};
- const box=()=>document.getElementById('buddy'),pet=()=>document.querySelector('#buddy .bd-pet');
- const maxL=()=>Math.max(0,innerWidth-110);
- const flash=(cls,ms)=>{const p=pet();if(!p)return;p.classList.remove('jump','spin','wig');void p.offsetWidth;p.classList.add(cls);setTimeout(()=>p&&p.classList.remove(cls),ms)};
- function wake(say){
-  BD.last=Date.now();
-  if(!BD.sleep)return;
-  BD.sleep=false;const p=pet();if(p)p.classList.remove('sleep');
-  if(say&&typeof buddySay=='function')buddySay('*yawn* I\'m up! 😴',2600);
- }
- function walkTo(x,cb){
-  const b=box(),p=pet();if(!b||!p){cb&&cb();return}
-  x=Math.max(-maxL(),Math.min(0,Math.round(x)));
-  const d=Math.abs(x-BD.x);
-  if(d<40){cb&&cb();return}
-  BD.busy=true;
-  const dur=d/(innerWidth<560?70:95);
-  b.classList.toggle('right',x>BD.x);
-  const bub=document.getElementById('bdBub');if(bub)bub.classList.remove('show');
-  b.style.transition='transform '+dur+'s linear';
-  b.style.transform='translateX('+x+'px)';
-  p.classList.remove('jump','spin','wig');p.classList.add('walk');
-  clearTimeout(BD.t);
-  BD.t=setTimeout(()=>{
-   BD.x=x;BD.busy=false;
-   const q=pet(),bb=box();
-   if(q)q.classList.remove('walk');
-   if(bb)bb.classList.toggle('lft',innerWidth-20+x<260);
-   cb&&cb();
-  },dur*1000+60);
- }
- function idleAct(){
-  const r=Math.random();
-  if(r<.5){
-   const far=Math.random()<.5;
-   const x=far?-(Math.random()*maxL()):BD.x+(Math.random()<.5?-1:1)*(120+Math.random()*260);
-   walkTo(x,()=>{if(Math.random()<.4)flash('jump',650)});
-  }else if(r<.68)flash('jump',650);
-  else if(r<.8)flash('spin',850);
-  else if(r<.9)flash('wig',750);
-  else{const b=box();if(b)b.classList.toggle('right')}
- }
- window.buddyAct=function(kind){
-  const b=box();if(!b)return;
-  wake(false);
-  if(kind=='cheer'){flash('spin',850)}
- };
- setInterval(()=>{
-  const b=box();if(!b)return;
-  if(!b.dataset.q){b.dataset.q='1';b.style.transition='none';b.style.transform='translateX('+BD.x+'px)';b.classList.toggle('lft',innerWidth-20+BD.x<260)}
-  if(reduce||document.hidden||BD.busy)return;
-  if(document.querySelector('.modal'))return;
-  if(typeof FT!=='undefined'&&FT.run)return;
-  const now=Date.now();
-  if(BD.sleep)return;
-  if(now-BD.last>70000){
-   BD.sleep=true;const p=pet();if(p){p.classList.remove('walk','jump','spin','wig');p.classList.add('sleep')}
-   return;
-  }
-  if(now>=BD.next){BD.next=now+5000+Math.random()*6000;idleAct()}
- },1000);
- ['pointerdown','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,e=>{
-  const onPet=e.target&&e.target.closest&&e.target.closest('.bd-pet');
-  if(BD.sleep&&onPet)wake(true);else{BD.last=Date.now();if(BD.sleep&&ev!='pointerdown')wake(false)}
- },{passive:true}));
- addEventListener('resize',()=>{
-  if(BD.x<-maxL()){BD.x=-maxL();const b=box();if(b){b.style.transition='none';b.style.transform='translateX('+BD.x+'px)'}}
- });
-})();
-</script>
 </body>
 </html>
