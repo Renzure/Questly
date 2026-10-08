@@ -7547,10 +7547,7 @@ function deadlineCard(u) {
   <div class="mut small" style="margin-bottom:8px">Link your Gmail account so we know this login really belongs to you.</div>
   <div class="gm-row"><span class="mut small">Username</span><b>${esc(u.name)}</b></div>
   ${body}
-  <div class="err" id="gmNote" style="min-height:0">${esc(note)}</div>
-  <details><summary>One-time Google setup</summary>
-   <ol class="mut small"><li>In Google Cloud Console, create an <b>OAuth client ID</b> of type <b>Web application</b>.</li><li>Add the web address where you open AstroQuest as an <b>Authorized JavaScript origin</b> (it must be https, or http://localhost).</li><li>Paste the client ID below.</li></ol>
-   <div class="gm-form"><input id="gmCid" placeholder="1234-abc.apps.googleusercontent.com" value="${esc(cid())}" autocomplete="off"><button class="pill" data-gm="cid">Save</button></div></details></div>`;}
+  <div class="err" id="gmNote" style="min-height:0">${esc(note)}</div></div>`;}
 
   const gmWrap = settingsTab;
   settingsTab = function (u) {
@@ -7766,7 +7763,11 @@ function deadlineCard(u) {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({service_id: c.s, template_id: c.t, user_id: c.k, template_params: {to_email: u.gmail.addr, to_name: u.name, code, app_name: 'AstroQuest'}})});
-      if (!r.ok) throw new Error((await r.text()) || 'send failed');
+      if (!r.ok) {
+        const t = ((await r.text()) || '').trim().slice(0, 140);
+        const er = new Error(t || 'send failed');
+        er.http = r.status;
+        throw er;}
       lastSend = Date.now();
       fp.h = await sha(code + '|' + k);
       fp.exp = Date.now() + 10 * 60000;
@@ -7780,7 +7781,8 @@ function deadlineCard(u) {
       say('');
     } catch (e) {
       busy = false;
-      say('Couldn\'t send the email. Check your EmailJS details and internet connection.');}}
+      const hint = location.protocol == 'file:' ? ' Tip: you opened this as a local file. Run it from localhost or a website (https) instead.' : '';
+      say(e && e.http ? 'EmailJS said (' + e.http + '): ' + e.message + hint : 'Couldn\'t reach EmailJS. Check your internet connection or ad blocker.' + hint);}}
 
   async function reset() {
     if (!fp || !fp.h) return;
