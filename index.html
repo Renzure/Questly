@@ -128,7 +128,7 @@ body::after{right:-180px;bottom:4%;background:radial-gradient(circle,rgba(255,20
 body{background:
   radial-gradient(circle at 15% 20%,rgba(47,91,255,.08),transparent 28%),
   radial-gradient(circle at 85% 75%,rgba(255,201,51,.06),transparent 26%),
-  var(--bg)}
+  var(--ubg,var(--bg))}
 #bgMotion{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:-1;opacity:.55}
 @keyframes orbFloat{
   0%{transform:translate3d(0,0,0) scale(1)}
@@ -1521,6 +1521,26 @@ window.addEventListener('online',()=>{const u=me();if(u&&u.cloud&&cloudReady())c
   document.body.appendChild(m);
  };
  const fd=ftDone;ftDone=function(){fd();alarmStart()};
+ /* Mobile fix: unlock audio on a real tap, keep the screen awake while the timer runs, catch up when the tab returns */
+ let unlocked=false,wl=null;
+ function unlock(){
+  try{
+   const a=ctx();
+   if(!unlocked){const b=a.createBuffer(1,1,22050),s=a.createBufferSource();s.buffer=b;s.connect(a.destination);s.start(0);unlocked=true}
+   if(a.state=='suspended')a.resume();
+  }catch(e){}
+ }
+ ['pointerdown','touchend','click','keydown'].forEach(ev=>document.addEventListener(ev,unlock,{passive:true}));
+ async function wakeOn(){try{if(navigator.wakeLock&&!wl&&FT.run){wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>{wl=null})}}catch(e){wl=null}}
+ function wakeOff(){try{wl&&wl.release()}catch(e){}wl=null}
+ const fs=ftStart;ftStart=function(){unlock();fs();wakeOn()};
+ const fc=ftCancel;ftCancel=function(){wakeOff();fc()};
+ const fd2=ftDone;ftDone=function(){wakeOff();fd2()};
+ document.addEventListener('visibilitychange',()=>{
+  if(document.hidden)return;
+  try{if(AC2&&AC2.state=='suspended')AC2.resume()}catch(e){}
+  if(FT.run){wakeOn();ftTick()}
+ });
  document.addEventListener('click',e=>{
   if(e.target.closest('.alarm-stop'))alarmStop();
   if(e.target.closest('.alarm-test')){alarmStart(false);setTimeout(alarmStop,3200)}
@@ -1961,11 +1981,23 @@ function bossWin(u,b){
  if(lvl(u.xp)>lv)setTimeout(()=>levelUp(lvl(u.xp)),900);
  if(tab=='boss')render();
 }
+const BGC=[['Default',''],['Midnight','#070d27'],['Deep purple','#1c0b3d'],['Forest','#08281d'],['Wine','#3a0b17'],['Slate','#18212f'],['Black','#000000'],['Cream','#fff7e6'],['Sky','#e6f0ff']];
+function applyBg(){
+ const c=db.ubg,r=document.documentElement.style;
+ if(c)r.setProperty('--ubg',c);else r.removeProperty('--ubg');
+ const m=document.querySelector('meta[name=theme-color]');if(m)m.content=c||'#2f5bff';
+}
+document.addEventListener('input',e=>{if(e.target.id=='bgCustom'){db.ubg=e.target.value;applyBg();saveLocal()}});
+document.addEventListener('change',e=>{if(e.target.id=='bgCustom'){db.ubg=e.target.value;save();render()}});
+applyBg();
 function settingsTab(u){
  const on=online2(u);
  return `<div class="card nofloat"><h3 style="margin:0 0 10px;font-size:19px">⚙️ Account</h3>
   <div class="lbub"><span>${esc(u.av)}</span><div><b>${esc(u.name)}</b><div class="mut small">Level ${lvl(u.xp)} · ${u.xp} XP · ${on?'Online sync is on':'Saved on this device'}</div></div></div>
   <div class="mut small">Change avatar</div><div class="avs">${AV.map(a=>`<button data-st="av" data-v="${a}" class="${a==u.av?'on':''}">${a}</button>`).join('')}</div>
+  <div class="mut small" style="margin-top:14px">Background color</div>
+  <div class="sws" style="margin-top:8px">${BGC.map(c=>`<button class="sw${(db.ubg||'')==c[1]?' on':''}" data-st="bg" data-v="${c[1]}"><i style="background:${c[1]||'var(--bg)'}"></i>${c[0]}</button>`).join('')}</div>
+  <div class="ft-cus" style="justify-content:flex-start;margin:10px 0 0"><span class="mut small">Custom</span><input id="bgCustom" type="color" value="${db.ubg||'#070d27'}" style="width:64px;height:44px;padding:4px;margin:0"></div>
   <button class="btn again" data-st="export">⬇️ Export my data</button></div>
  <div class="card nofloat danger-zone"><b style="color:#e5484d">Danger zone</b><p class="mut small" style="line-height:1.6">Deleting your account permanently erases your progress, quests, decks, schedule, reviewer files, messages and friendships${on?', including your online data':''}. This cannot be undone.</p><button class="btn danger" data-st="delete">🗑️ Delete my account</button></div>`;
 }
@@ -2019,6 +2051,7 @@ document.addEventListener('click',e=>{
  const st=e.target.closest&&e.target.closest('[data-st]');
  if(!st)return;const k=st.dataset.st;
  if(k=='av'){u.av=st.dataset.v;save();render();sfx.pop()}
+ else if(k=='bg'){db.ubg=st.dataset.v||'';save();applyBg();render();sfx.pop()}
  else if(k=='export')exportData(u);
  else if(k=='delete')delModal(u);
 });
