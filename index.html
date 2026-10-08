@@ -2974,7 +2974,18 @@ function quests(u) {
  <div class="card"><b>Active quests</b><ul>${open.length ? open.map(row).join('') : '<li class="empty">🗺️<br>No open quests yet. Add your first one above!</li>'}</ul></div>
  ${dn.length ? `<div class="card"><b>Completed</b><ul>${dn.map(row).join('')}</ul></div>` : ''}`;}
 
+/* Online sync drops empty arrays, so a habit can come back without "days" - repair it */
+function fixHabits(u) {
+  let v = u.habits;
+  if (v && !Array.isArray(v) && typeof v == 'object') v = Object.values(v);
+  u.habits = (Array.isArray(v) ? v : []).filter(h => h && typeof h == 'object');
+  u.habits.forEach(h => {
+    let d = h.days;
+    if (d && !Array.isArray(d) && typeof d == 'object') d = Object.values(d);
+    h.days = Array.isArray(d) ? d.filter(x => x != null) : [];
+    if (h.t == null) h.t = '';});}
 function habits(u) {
+  fixHabits(u);
   const t = today();
   const row = h => {
     const d = h.days.includes(t),
@@ -3350,6 +3361,7 @@ function fixUser(u) {
     let v = u[k];
     if (v && !Array.isArray(v) && typeof v == 'object') v = Object.values(v);
     u[k] = Array.isArray(v) ? v.filter(x => x != null) : [];});
+  fixHabits(u);
   u.decks.forEach(d => {
     let c = d.cards;
     if (c && !Array.isArray(c)) c = Object.values(c);
@@ -4151,12 +4163,14 @@ function act(a, v, el) {
   } else if (a == 'addh') {
     const t = $('#ht').value.trim();
     if (!t) return;
+    fixHabits(u);
     u.habits.push({id: Date.now(), t, days: []});
     save();
     render();
     sfx.pop();
     $('#ht').focus();
   } else if (a == 'chk') {
+    fixHabits(u);
     const h = u.habits.find(x => x.id == v),
       t = today();
     if (h && !h.days.includes(t)) {
