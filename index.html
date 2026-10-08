@@ -3728,7 +3728,7 @@ function home(u) {
     ['boss', '👹 Boss' + (window.qBoss ? qBoss(u) : '')],
     ['settings', '⚙️ Settings'],
     ['stats', '🏆 Stats']];
-  return `<header><b class="brand"><i class="rkt" title="Launch!">${ROCKET}</i><span class="grad">AstroQuest</span></b><span><button class="ghost" data-act="snd" title="Sound">${db.mute ? '🔇' : '🔊'}</button><button class="ghost" data-act="theme" title="Theme">🌓</button><span id="syncDot" title="Online sync">${syncIcon(u)}</span> ${u.av} ${esc(u.name)} <button class="ghost" data-act="out">Log out</button></span></header>
+  return `<header><b class="brand"><i class="rkt" title="Launch!">${ROCKET}</i><span class="grad">AstroQuest</span></b><span>${window.ntBell ? ntBell(u) : ''}<button class="ghost" data-act="snd" title="Sound">${db.mute ? '🔇' : '🔊'}</button><button class="ghost" data-act="theme" title="Theme">🌓</button><span id="syncDot" title="Online sync">${syncIcon(u)}</span> ${u.av} ${esc(u.name)} <button class="ghost" data-act="out">Log out</button></span></header>
  <section class="card hero"><div class="lv" style="--p:${p}"><span>${L}</span></div><div class="grow"><div class="row"><b>Level ${L} · ${['Rookie', 'Explorer', 'Adventurer', 'Hero', 'Champion', 'Legend'][Math.min(L - 1, 5)]}</b><span class="mut">${p}/100 XP</span></div><div class="bar"><div style="width:${p}%"></div></div><div class="strip">${strip}</div></div><div class="fire"><span class="${s ? 'lit' : ''}">🔥</span><b>${s}</b><small>day streak</small></div></section>
  ${goal(u)}<nav class="tabs">${T.map(x => `<button data-act="tab" data-v="${x[0]}" class="${tab == x[0] ? 'on' : ''}">${x[1]}</button>`).join('')}</nav>
  ${tab == 'quests' ? nextClassCard(u) + quests(u) : tab == 'habits' ? habits(u) : tab == 'focus' ? focusTab(u) : tab == 'schedule' ? schedule(u) : tab == 'reviewers' ? reviewers(u) : tab == 'quiz' ? quizTab(u) : tab == 'friends' ? friendsTab(u) : tab == 'music' ? musicTab(u) : tab == 'lang' ? langTab(u) : tab == 'chat' ? chatTab(u) : tab == 'rewards' ? rewardsTab(u) : tab == 'boss' ? bossTab(u) : tab == 'buddy' ? buddyTab(u) : tab == 'planner' ? plannerTab(u) : tab == 'settings' ? settingsTab(u) : stats(u)}`;}
@@ -7235,4 +7235,271 @@ function deadlineCard(u) {
 .rkt-puff{position:fixed;z-index:199;pointer-events:none;border-radius:50%;background:radial-gradient(circle,#fff 0%,rgba(255,255,255,.85) 35%,rgba(190,200,230,.5) 70%,transparent 100%)}
 @media (prefers-reduced-motion:reduce){.rkt .rsvg,.rkt .flame{animation:none!important}}
 </style>
+  <style>
+/* ===== NOTIFICATIONS ===== */
+.bellbtn{position:relative;line-height:1}
+.bellbtn .bi{display:inline-block;font-size:18px;transform-origin:50% 0}
+.bellbtn.ring .bi{animation:bellRing 2.4s ease-in-out infinite}
+@keyframes bellRing{0%,55%,100%{transform:rotate(0)}60%{transform:rotate(14deg)}66%{transform:rotate(-12deg)}72%{transform:rotate(9deg)}78%{transform:rotate(-6deg)}84%{transform:rotate(0)}}
+.nbadge{position:absolute;top:-7px;right:-7px;min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:#e5484d;color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;border:2px solid var(--bg);box-sizing:border-box}
+.nbadge[hidden]{display:none}
+#ntPanel{position:fixed;z-index:90;top:calc(env(safe-area-inset-top,0px) + 62px);right:12px;width:min(390px,calc(100vw - 24px));max-height:74vh;overflow:auto;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:20px;box-shadow:0 20px 55px rgba(0,0,0,.3);padding:14px 14px 10px;animation:ntIn .22s ease-out}
+@keyframes ntIn{from{opacity:0;transform:translateY(-8px) scale(.98)}}
+#ntPanel .nth{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+#ntPanel .nts{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--mut);margin:12px 2px 6px}
+.nt-item{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:14px;padding:9px 11px;margin-bottom:6px;cursor:pointer;font-size:15px}
+.nt-item:hover{border-color:var(--blue)}
+.nt-item .ic{font-size:20px;flex:none}
+.nt-item .tx{flex:1;min-width:0}
+.nt-item .tx b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.nt-item .tx small{color:var(--mut);font-size:12.5px}
+.nt-item .tg{flex:none;font-size:11.5px;font-weight:700;color:#fff;border-radius:999px;padding:3px 9px}
+.nt-empty{text-align:center;padding:22px 8px;color:var(--mut)}
+.nt-set{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.nt-set:first-of-type{border-top:0}
+.nt-set input[type=checkbox]{width:20px;height:20px;flex:none;margin:0}
+.nt-set select,.nt-set input[type=time]{width:auto;min-width:0;padding:6px 8px}
+</style>
+<script>
+/* ===== Notifications: bell + pending list + reminders for quests, dailies, classes, exams ===== */
+(function () {
+  const DEF = {app: true, sys: false, lead: 15, time: '18:00', exam: 3, c: true, e: true, d: true, q: true};
+  const cfg = u => {
+    u.nt = Object.assign({}, DEF, u.nt && typeof u.nt == 'object' ? u.nt : {});
+    return u.nt;};
+  const tm = t => {
+    const [h, m] = String(t || '0:0').split(':').map(Number);
+    return (h || 0) * 60 + (m || 0);};
+  const arr = v => (Array.isArray(v) ? v : v && typeof v == 'object' ? Object.values(v) : []).filter(Boolean);
+
+  function items(u) {
+    const now = new Date(),
+      di = (now.getDay() + 6) % 7,
+      mins = now.getHours() * 60 + now.getMinutes(),
+      t = today();
+    const o = {classes: [], exams: [], dailies: [], quests: []};
+    arr(u.schedule).forEach(k => {
+      if (!k.start) return;
+      const off = k.day == di ? 0 : k.day == (di + 1) % 7 ? 1 : -1;
+      if (off < 0) return;
+      if (off == 0 && tm(k.end) <= mins) return;
+      o.classes.push({k, off, live: off == 0 && tm(k.start) <= mins, wait: tm(k.start) - mins, sort: off * 1440 + tm(k.start)});});
+    o.classes.sort((a, b) => a.sort - b.sort);
+    arr(u.exams).forEach(x => {
+      if (x.done) return;
+      const n = dleft(x.date);
+      if (n == null || n > 7) return;
+      o.exams.push({x, n});});
+    o.exams.sort((a, b) => a.n - b.n);
+    arr(u.habits).forEach(h => {
+      if (!arr(h.days).includes(t)) o.dailies.push(h);});
+    arr(u.tasks).forEach(q => {
+      if (!q.done) o.quests.push(q);});
+    return o;}
+  const total = o => o.classes.length + o.exams.length + o.dailies.length + o.quests.length;
+
+  window.ntBell = u => {
+    const n = total(items(u));
+    return `<button class="ghost bellbtn${n ? ' ring' : ''}" data-nt="bell" title="Notifications" aria-label="Notifications"><span class="bi">🔔</span><b class="nbadge"${n ? '' : ' hidden'}>${n > 9 ? '9+' : n}</b></button>`;};
+  function updBadge() {
+    const u = me(),
+      b = document.querySelector('.nbadge'),
+      bell = document.querySelector('.bellbtn');
+    if (!u || !b) return;
+    const n = total(items(u));
+    b.textContent = n > 9 ? '9+' : n;
+    b.hidden = !n;
+    if (bell) bell.classList.toggle('ring', !!n);}
+
+  const classTxt = c => (c.live ? 'In progress · ends ' + fmtT(c.k.end) : c.off == 0 ? 'Starts in ' + (c.wait < 60 ? c.wait + ' min' : Math.floor(c.wait / 60) + 'h ' + (c.wait % 60) + 'm') + ' · ' + fmtT(c.k.start) : 'Tomorrow · ' + fmtT(c.k.start));
+  function panelHtml(u) {
+    const o = items(u),
+      sec = (h, list) => (list.length ? `<div class="nts">${h}</div>` + list.join('') : '');
+    const it = (go, ic, t, sub, tag, col) => `<button class="nt-item" data-nt="go" data-v="${go}"><span class="ic">${ic}</span><span class="tx"><b>${esc(t)}</b><small>${sub}</small></span>${tag ? `<span class="tg" style="background:${col}">${tag}</span>` : ''}</button>`;
+    const cls = o.classes.map(c => it('schedule', c.live ? '📖' : '⏰', c.k.name, esc(classTxt(c)) + (c.k.room ? ' · ' + esc(c.k.room) : ''), c.live ? 'NOW' : c.off ? 'TMR' : c.wait <= 30 ? 'SOON' : '', c.live ? '#e5484d' : c.wait <= 30 && !c.off ? '#f59e0b' : '#2f5bff'));
+    const exs = o.exams.map(e => it('planner', PL_ICON[e.x.type] || '📝', e.x.name, esc(e.x.type || 'Exam') + (e.x.subject ? ' · ' + esc(e.x.subject) : ''), dlabel(e.n), dcol(e.n)));
+    const dls = o.dailies.map(h => it('habits', '🔥', h.t, 'Not checked in today', 'DAILY', '#f59e0b'));
+    const qs = o.quests.map(q => it('quests', '⚔️', q.t, '+' + q.d + ' XP', '', ''));
+    const body = total(o) ? sec('Classes', cls) + sec('Exams & deadlines', exs) + sec('Daily activities', dls) + sec('Open quests', qs) : '<div class="nt-empty">🎉<br><b>All caught up!</b><br>Nothing is waiting for you right now.</div>';
+    return `<div class="nth"><b style="font-size:18px">🔔 Reminders</b><span><button class="ghost" data-nt="settings" title="Notification settings">⚙️</button><button class="ghost" data-nt="close" title="Close">✕</button></span></div>${body}`;}
+  const panel = () => document.getElementById('ntPanel');
+  function closePanel() {
+    const p = panel();
+    if (p) p.remove();}
+  function openPanel() {
+    const u = me();
+    if (!u) return;
+    closePanel();
+    const p = document.createElement('div');
+    p.id = 'ntPanel';
+    p.innerHTML = panelHtml(u);
+    document.body.appendChild(p);}
+
+  /* ---- settings card (inserted above the danger zone) ---- */
+  function ntCard(u) {
+    const c = cfg(u),
+      sup = 'Notification' in window,
+      perm = sup ? Notification.permission : 'unsupported';
+    const status = !sup ? 'Not supported in this browser' : perm == 'denied' ? 'Blocked. Allow it in your browser site settings' : c.sys && perm == 'granted' ? 'On' : 'Off';
+    const chk = (k, label) => `<label class="nt-set"><span>${label}</span><input type="checkbox" data-nt="set" data-k="${k}" ${c[k] ? 'checked' : ''}></label>`;
+    const sel = (k, label, vals, unit) => `<label class="nt-set"><span>${label}</span><select data-nt="set" data-k="${k}" data-num="1">${vals.map(v => `<option value="${v}" ${c[k] == v ? 'selected' : ''}>${v} ${unit}</option>`).join('')}</select></label>`;
+    return `<div class="card nofloat" id="ntSettings"><h3 style="margin:0 0 4px;font-size:19px">🔔 Notifications</h3>
+  <div class="mut small" style="margin-bottom:8px">Get reminded about open quests, daily activities, upcoming classes and exams.</div>
+  ${chk('app', 'In-app reminders')}
+  <div class="nt-set"><span>Device notifications<br><small class="mut">${status}</small></span><button class="pill" data-nt="sys">${c.sys && perm == 'granted' ? 'Turn off' : 'Turn on'}</button></div>
+  ${chk('c', '📖 Upcoming classes')}${chk('e', '📝 Exams &amp; deadlines')}${chk('d', '🔥 Daily activities')}${chk('q', '⚔️ Open quests')}
+  ${sel('lead', 'Remind me before a class', [5, 10, 15, 30, 60], 'min')}
+  ${sel('exam', 'Exam heads-up starts', [1, 2, 3, 5, 7], 'days before')}
+  <label class="nt-set"><span>Daily &amp; quest reminder at</span><input type="time" data-nt="set" data-k="time" value="${esc(c.time)}"></label>
+  <div class="nt-set"><span></span><button class="pill" data-nt="test">Send a test</button></div>
+  <div class="reviewer-note" style="margin-top:8px">Reminders are delivered while AstroQuest is open in a browser tab or installed app. The 🔔 bell always shows what's pending.</div></div>`;}
+  const _st = settingsTab;
+  settingsTab = function (u) {
+    const h = _st(u),
+      i = h.indexOf('<div class="card nofloat danger-zone"');
+    return i < 0 ? h + ntCard(u) : h.slice(0, i) + ntCard(u) + h.slice(i);};
+
+  /* ---- delivering reminders ---- */
+  const iconUrl = () => {
+    const l = document.querySelector('link[rel=apple-touch-icon]');
+    return l ? l.href : undefined;};
+  function deliver(list) {
+    const u = me();
+    if (!u || !list.length) return;
+    const c = cfg(u);
+    if (c.sys && 'Notification' in window && Notification.permission == 'granted')
+      list.forEach(n => {
+        try {
+          new Notification(n[0], {body: n[1], tag: n[2], icon: iconUrl()});
+        } catch (e) {}});
+    if (c.app) {
+      try {
+        sfx.pop();
+      } catch (e) {}
+      toast(list[0][0] + (list[0][1] ? ' · ' + list[0][1] : '') + (list.length > 1 ? ' (+' + (list.length - 1) + ' more)' : ''));
+      clearTimeout(toast.h);
+      toast.h = setTimeout(() => $('#toast').classList.remove('show'), 6500);}}
+  const SKEY = 'qnotif';
+  function sentLoad() {
+    try {
+      const s = JSON.parse(localStorage.getItem(SKEY) || '{}');
+      return s.d == today() ? s : {d: today(), k: {}};
+    } catch (e) {
+      return {d: today(), k: {}};}}
+  const sentSave = s => {
+    try {
+      localStorage.setItem(SKEY, JSON.stringify(s));
+    } catch (e) {}};
+  function tick() {
+    const u = me();
+    if (!u) return;
+    const c = cfg(u),
+      now = new Date(),
+      di = (now.getDay() + 6) % 7,
+      mins = now.getHours() * 60 + now.getMinutes(),
+      S = sentLoad(),
+      who = db.cur + ':',
+      out = [];
+    if (c.c)
+      arr(u.schedule).forEach(k => {
+        if (!k.start || k.day != di) return;
+        const w = tm(k.start) - mins,
+          key = who + 'c' + k.id;
+        if (w >= 0 && w <= c.lead && !S.k[key]) {
+          S.k[key] = 1;
+          out.push(['📖 ' + k.name + (w <= 0 ? ' starts now' : ' starts in ' + w + ' min'), (k.room ? 'Room ' + k.room + ' · ' : '') + fmtT(k.start), 'class-' + k.id]);}});
+    if (c.e && mins >= 7 * 60)
+      arr(u.exams).forEach(x => {
+        if (x.done) return;
+        const n = dleft(x.date),
+          key = who + 'e' + x.id;
+        if (n != null && n <= c.exam && n >= -7 && !S.k[key]) {
+          S.k[key] = 1;
+          out.push([(PL_ICON[x.type] || '📝') + ' ' + x.name, (x.type || 'Exam') + ' · ' + dlabel(n), 'exam-' + x.id]);}});
+    if (mins >= tm(c.time) && !S.k[who + 'd']) {
+      S.k[who + 'd'] = 1;
+      const o = items(u),
+        a = c.d ? o.dailies.length : 0,
+        q = c.q ? o.quests.length : 0;
+      if (a || q) {
+        const bits = [];
+        if (a) bits.push(a + ' daily ' + (a == 1 ? 'activity' : 'activities'));
+        if (q) bits.push(q + ' open ' + (q == 1 ? 'quest' : 'quests'));
+        out.push(['🔥 Still on your list today', bits.join(' and ') + ' waiting', 'digest']);}}
+    sentSave(S);
+    deliver(out);
+    updBadge();
+    if (panel()) panel().innerHTML = panelHtml(u);}
+
+  /* ---- events ---- */
+  document.addEventListener('click', e => {
+    const el = e.target.closest && e.target.closest('[data-nt]');
+    const p = panel();
+    if (!el) {
+      if (p && !p.contains(e.target)) closePanel();
+      return;}
+    const a = el.dataset.nt,
+      u = me();
+    if (!u) return;
+    if (a == 'bell') {
+      if (p) closePanel();
+      else openPanel();
+    } else if (a == 'close') closePanel();
+    else if (a == 'go') {
+      tab = el.dataset.v;
+      closePanel();
+      render();
+      try {
+        sfx.pop();
+      } catch (er) {}
+    } else if (a == 'settings') {
+      tab = 'settings';
+      closePanel();
+      render();
+    } else if (a == 'sys') {
+      const c = cfg(u);
+      if (c.sys) {
+        c.sys = false;
+        save();
+        render();
+      } else if (!('Notification' in window)) toast('This browser does not support device notifications.');
+      else {
+        const done = perm => {
+          if (perm == 'granted') {
+            c.sys = true;
+            toast('Device notifications are on 🔔');
+          } else toast('Permission was not granted. Allow notifications for this site in your browser settings.');
+          save();
+          render();};
+        try {
+          const r = Notification.requestPermission(done);
+          if (r && r.then) r.then(done);
+        } catch (er) {
+          toast('Could not ask for permission here.');}}
+    } else if (a == 'test') {
+      const t = [['🔔 Test reminder', 'Notifications are working!', 'test']];
+      deliver(t);}});
+  document.addEventListener('change', e => {
+    const el = e.target.closest && e.target.closest('[data-nt=set]');
+    const u = me();
+    if (!el || !u) return;
+    const c = cfg(u),
+      k = el.dataset.k;
+    c[k] = el.type == 'checkbox' ? el.checked : el.dataset.num ? +el.value : el.value || DEF[k];
+    save();});
+  document.addEventListener('keydown', e => {
+    if (e.key == 'Escape') closePanel();});
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) tick();});
+
+  /* keep the bell fresh after every render, close the panel on logout */
+  const _r = render;
+  render = function () {
+    _r();
+    if (!me()) closePanel();};
+  setInterval(tick, 30000);
+  setTimeout(tick, 5000);
+  render();
+})();</script>
+
   </body></html>
