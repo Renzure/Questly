@@ -3361,6 +3361,7 @@ async function jfetch(url, opt) {
   return j;}
 function cloudMsg(e) {
   const m = String((e && e.message) || e);
+  if (/PROJECT_NUMBER_MISMATCH|INVALID_REFRESH_TOKEN|TOKEN_EXPIRED|USER_NOT_FOUND|CREDENTIAL_TOO_OLD|MISSING_REFRESH_TOKEN|INVALID_GRANT/.test(m)) return 'Your saved online sign-in no longer matches this database. Tap Reconnect and enter your password.';
   if (/WEAK_PASSWORD/.test(m)) return 'Online accounts need a password of at least 6 characters.';
   if (/Permission denied/i.test(m)) return 'Permission denied. Check that you published the database rules from the setup guide.';
   if (/API key not valid|API_KEY_INVALID|INVALID_API_KEY/i.test(m)) return 'That Firebase API key is not valid.';
@@ -3375,7 +3376,9 @@ async function tok() {
   const u = me(),
     rt = CS.rt || (u && u.cloud && u.cloud.rt);
   if (!rt) throw new Error('NOT_ONLINE');
-  const j = await jfetch('https://securetoken.googleapis.com/v1/token?key=' + encodeURIComponent(cfg().apiKey), {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(rt)});
+  let j;
+  try { j = await jfetch('https://securetoken.googleapis.com/v1/token?key=' + encodeURIComponent(cfg().apiKey), {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(rt)});
+  } catch (e) { if (/PROJECT_NUMBER_MISMATCH|INVALID_REFRESH_TOKEN|TOKEN_EXPIRED|USER_NOT_FOUND|USER_DISABLED|CREDENTIAL_TOO_OLD|MISSING_REFRESH_TOKEN|INVALID_GRANT/.test(String((e && e.message) || e))) { CF.stale = true; CS = {}; } throw e; }
   CS = {id: j.id_token, rt: j.refresh_token, uid: j.user_id, exp: Date.now() + N(j.expires_in) * 1000};
   if (u && u.cloud) {
     u.cloud.rt = CS.rt;
@@ -3432,6 +3435,7 @@ async function cloudConnect(u, pw, silent) {
   if (!silent) toast('Connecting… ☁️');
   try {
     await goOnline(u, pw);
+    CF.stale = false; CF.err = '';
     const bk = await dbx('GET', 'userdata/' + CS.uid);
     const cx = bk && bk.data ? N(bk.data.xp) : 0;
     if (cx > u.xp && confirm('Found your online save (Level ' + lvl(cx) + ', ' + cx + ' XP), which is ahead of this device. Load it?')) {
@@ -3650,7 +3654,7 @@ function cloudCard(u) {
   let body;
   if (!cloudReady()) body = `<div class="mut small" style="margin-bottom:8px">Connect a free Firebase database to add friends on any device, back up your progress, and join a global leaderboard.</div><input id="cfgKey" placeholder="Firebase Web API key" autocomplete="off"><input id="cfgUrl" placeholder="Database URL (https://...firebaseio.com)" autocomplete="off"><button class="btn" data-act="cfgsave">Save connection</button>`;
   else if (!u.cloud) body = `<div class="mut small" style="margin-bottom:8px">Sign in online with your AstroQuest password. It goes straight to Firebase Authentication and is never stored by AstroQuest.</div><input id="cloudPw" type="password" placeholder="Your password" autocomplete="current-password"><button class="btn" data-act="cgo">Go online ☁️</button><div style="margin-top:8px"><a data-act="cfgreset">Change database</a></div>${CF.err ? `<div class="reviewer-note">⚠️ ${esc(CF.err)}</div>` : ''}`;
-  else body = `<div class="row"><b>🟢 Online as ${esc(u.cloud.key)}</b><span class="mut small">${CF.busy ? 'syncing…' : CF.last ? 'synced ' + Math.max(0, Math.round((Date.now() - CF.last) / 1000)) + 's ago' : ''}</span></div>${CF.err ? `<div class="reviewer-note" style="color:#e5484d">⚠️ ${esc(CF.err)}</div>` : ''}<div class="deck-btns"><button class="pill" data-act="csync">🔄 Sync now</button><button class="ghost" data-act="cdis">Disconnect</button><button class="ghost" data-act="cfgreset">Change database</button></div><div class="reviewer-note">Your XP, quests, habits, schedule and quiz decks are backed up automatically. Reviewer files stay on this device.</div>`;
+  else body = `<div class="row"><b>🟢 Online as ${esc(u.cloud.key)}</b><span class="mut small">${CF.busy ? 'syncing…' : CF.last ? 'synced ' + Math.max(0, Math.round((Date.now() - CF.last) / 1000)) + 's ago' : ''}</span></div>${CF.err ? `<div class="reviewer-note" style="color:#e5484d">⚠️ ${esc(CF.err)}</div>` : ''}<div class="deck-btns"><button class="pill" data-act="csync">🔄 Sync now</button>${CF.stale ? '<button class="pill" data-act="creauth">🔑 Reconnect</button>' : ''}<button class="ghost" data-act="cdis">Disconnect</button><button class="ghost" data-act="cfgreset">Change database</button></div><div class="reviewer-note">Your XP, quests, habits, schedule and quiz decks are backed up automatically. Reviewer files (up to 10 MB each) sync too.</div>`;
   return `<div class="card nofloat"><h3 style="margin:0 0 6px;font-size:19px">☁️ Online Database</h3>${body}
  <details style="margin-top:12px"><summary class="mut small" style="cursor:pointer">Setup guide (5 minutes, free)</summary>
   <ol class="small" style="padding-left:20px;line-height:1.7">
@@ -3836,7 +3840,7 @@ function act(a, v, el) {
     render();
     if (cloudReady()) {
       const nu = db.users[k];
-      if (nu.cloud) cloudSync(nu);
+      if (nu.cloud) Promise.resolve(cloudSync(nu)).then(() => { if (CF.stale) cloudConnect(nu, pw0, true); });
       else cloudConnect(nu, pw0, true);}
   } else if (a == 'close') {
     el.closest('.modal').remove();
@@ -8602,6 +8606,31 @@ html.standalone body{padding-top:env(safe-area-inset-top,0px)}
   }, true);
 
   render();
+})();
+</script>
+<script id="reauth-js">
+(function () {
+  const _a = act;
+  act = function (a, v, el) {
+    if (a == 'creauth') {
+      const u = me(); if (!u) return;
+      const m = document.createElement('div'); m.className = 'modal';
+      m.innerHTML = '<div class="mbox" style="max-width:380px;text-align:left"><div class="big" style="text-align:center">🔑</div><h2 style="text-align:center;font-size:26px">Reconnect online</h2><p class="mut small" style="text-align:center;line-height:1.6">Enter your AstroQuest password to sign in to the online database again. Your data stays as it is.</p><input id="reAuthPw" type="password" placeholder="Password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false"><div class="err" id="reAuthErr" style="display:none;margin:8px 0"></div><button class="btn" id="reAuthGo">Reconnect</button><button class="ghost" style="width:100%;margin-top:8px" data-act="close">Cancel</button></div>';
+      document.body.appendChild(m);
+      const i = m.querySelector('#reAuthPw'), go = m.querySelector('#reAuthGo'), er = m.querySelector('#reAuthErr');
+      i.focus();
+      const run = async () => {
+        const pw = i.value.trim();
+        if (!pw || (u.pw !== hash(i.value) && u.pw !== hash(pw))) { er.textContent = 'That password doesn\'t match this account.'; er.style.display = 'block'; return; }
+        go.disabled = true; go.textContent = 'Connecting…';
+        await cloudConnect(u, pw, false);
+        m.remove();
+      };
+      go.onclick = run; i.onkeydown = e => { if (e.key == 'Enter') run(); };
+      return;
+    }
+    return _a(a, v, el);
+  };
 })();
 </script>
 </body></html>
