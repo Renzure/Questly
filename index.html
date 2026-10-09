@@ -3047,20 +3047,20 @@ function reviewers(u) {
           <div class="file-item">
             <span class="file-icon">${fileIcon(f.name)}</span>
             <div class="file-info grow">
-              <a href="${f.data}" target="_blank" rel="noopener" download="${esc(f.name)}">${esc(f.name)}</a>
-              <div class="file-meta">${fileSize(f.size)} · ${esc(f.type || 'File')}</div>
+              <a href="#" data-aqf="${s.id}:${f.id}">${esc(f.name)}</a>
+              <div class="file-meta">${fileSize(f.size)} · ${esc(f.type || 'File')} · ${f.up ? '☁️ synced' : u.cloud ? '⏳ uploading…' : '📱 this device only'}</div>
             </div>
             <div class="file-actions">
-              <a href="${f.data}" target="_blank" rel="noopener" download="${esc(f.name)}"><button type="button">Open</button></a>
+              <a href="#" data-aqf="${s.id}:${f.id}"><button type="button">Open</button></a>
               <button data-act="fdel" data-v="${s.id}:${f.id}" title="Delete file">×</button>
             </div>
           </div>`)
                 .join('')
-            : '<div class="no-files">📂 Pick a file below to open it. Nothing is saved.</div>'
+            : '<div class="no-files">📂 No files yet. Add one below — it syncs to all your devices.</div>'
         }
       </div>
       <div class="upload-row">
-        <label class="upload-label" for="file-${s.id}">📂 Open a file</label>
+        <label class="upload-label" for="file-${s.id}">📂 Add a file</label>
         <input id="file-${s.id}" type="file" data-subject="${s.id}" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.png,.jpg,.jpeg,.webp,.zip">
       </div>
     </div>`;
@@ -3070,7 +3070,7 @@ function reviewers(u) {
       <div class="reviewer-head">
         <div class="grow">
           <h3>📚 My Reviewers</h3>
-          <div class="mut small">Open reviewer files by subject. Files are opened, never saved.</div>
+          <div class="mut small">Keep reviewer files by subject. They sync to all your devices.</div>
         </div>
       </div>
       <div class="add">
@@ -3078,7 +3078,7 @@ function reviewers(u) {
       </div>
       <input id="reviewerSearch" placeholder="🔎 Search subjects or reviewer files..." maxlength="60">
       <button class="btn" data-act="addsubject">Add subject</button>
-      <div class="reviewer-note">Files open straight from your device and are never saved in AstroQuest. Browsers can display PDFs and images; other types (Word, PowerPoint) will download instead.</div>
+      <div class="reviewer-note">Files (up to 10 MB each) are saved to your account and sync across your devices. Browsers display PDFs and images; other types (Word, PowerPoint) download instead.</div>
     </div>
     <div class="card">
       <div class="row">
@@ -3278,7 +3278,7 @@ function friendsLocal(u) {
 
 /* ===== Online database: Firebase Auth + Realtime Database over REST ===== */
 // Optional: paste your Firebase details here to pre-connect every device, or enter them inside the app (Friends tab).
-const CLOUD_DEFAULT = {apiKey: 'AIzaSyDkEQj4pfxgepSL9ncugmXUygfDwA17NAw', databaseURL: 'https://questly-database-default-rtdb.asia-southeast1.firebasedatabase.app'};
+const CLOUD_DEFAULT = {apiKey: 'AIzaSyBZcwqHfen4Fmi3Jmn8AZ7e7Y8mDEu8VWA', databaseURL: 'https://astraquest-73e62-default-rtdb.asia-southeast1.firebasedatabase.app'};
 const TITLE0 = document.title;
 const N = x => Number(x) || 0;
 const okKey = k => /^[\w-]{1,40}$/.test(String(k));
@@ -3297,16 +3297,57 @@ const newCF = () => ({friends: [], reqs: [], sent: [], cheers: [], board: [], bu
 let CS = {},
   CF = newCF();
 const own = k => "root.child('profiles').child(" + k + ").child('uid').val() === auth.uid";
+const NUM = (lo, hi) => 'newData.isNumber() && newData.val() >= ' + lo + ' && newData.val() <= ' + hi;
+const STR = max => 'newData.isString() && newData.val().length >= 1 && newData.val().length <= ' + max;
 const RULES = JSON.stringify(
   {
     rules: {
-      profiles: {'.read': 'auth != null', '.indexOn': ['xp'], '$u': {'.write': "auth != null && (!data.exists() ? newData.child('uid').val() === auth.uid : data.child('uid').val() === auth.uid)", '.validate': "newData.hasChildren(['uid','name','xp'])"}},
-      userdata: {'$uid': {'.read': 'auth != null && auth.uid === $uid', '.write': 'auth != null && auth.uid === $uid'}},
-      friends: {'.read': 'auth != null', '$u': {'$o': {'.write': 'auth != null && (' + own('$u') + ' || (' + own('$o') + " && (!newData.exists() || root.child('requests').child($o).child($u).exists())))"}}},
-      requests: {'$to': {'.read': 'auth != null && ' + own('$to'), '$from': {'.read': 'auth != null && ' + own('$from'), '.write': 'auth != null && (' + own('$from') + ' || ' + own('$to') + ')'}}},
-      outbox: {'$from': {'.read': 'auth != null && ' + own('$from'), '$to': {'.write': 'auth != null && (' + own('$from') + ' || (' + own('$to') + ' && !newData.exists()))'}}},
-      cheers: {'$to': {'.read': 'auth != null && ' + own('$to'), '.write': 'auth != null && !newData.exists() && ' + own('$to'), '$id': {'.write': 'auth != null && ((!newData.exists() && ' + own('$to') + ") || (root.child('profiles').child(newData.child('from').val()).child('uid').val() === auth.uid && root.child('friends').child($to).child(newData.child('from').val()).exists()))", '.validate': "newData.child('emoji').val().length < 9"}}},
-      chats: {'$o': {'$f': {'.read': 'auth != null && ' + own('$o'), '$id': {'.write': 'auth != null && (' + own('$o') + " || (root.child('profiles').child(newData.child('from').val()).child('uid').val() === auth.uid && root.child('friends').child($o).child(newData.child('from').val()).exists()))", '.validate': "newData.child('t').val().length < 400"}}}}}},
+      '.read': false,
+      '.write': false,
+      profiles: {
+        '.read': 'auth != null',
+        '.indexOn': ['xp'],
+        '$u': {
+          '.write': "auth != null && $u.matches(/^[a-z0-9_-]{1,40}$/) && (!data.exists() ? newData.child('uid').val() === auth.uid : data.child('uid').val() === auth.uid)",
+          '.validate': "newData.hasChildren(['uid','name','xp'])",
+          uid: {'.validate': 'newData.isString() && newData.val() === auth.uid'},
+          name: {'.validate': STR(20)},
+          av: {'.validate': STR(8)},
+          xp: {'.validate': NUM(0, 1e8)},
+          lv: {'.validate': NUM(0, 1e6)},
+          st: {'.validate': NUM(0, 1e5)},
+          best: {'.validate': NUM(0, 1e5)},
+          done: {'.validate': NUM(0, 1e8)},
+          bg: {'.validate': NUM(0, 1000)},
+          upd: {'.validate': 'newData.isNumber()'},
+          '$other': {'.validate': false}}},
+      userdata: {
+        '$uid': {
+          '.read': 'auth != null && auth.uid === $uid',
+          '.write': 'auth != null && auth.uid === $uid',
+          '.validate': "newData.hasChildren(['upd','data'])",
+          upd: {'.validate': 'newData.isNumber()'},
+          data: {'.validate': 'newData.hasChildren()'},
+          '$other': {'.validate': false}}},
+      files: {
+        '$uid': {
+          '.read': 'auth != null && auth.uid === $uid',
+          '.write': 'auth != null && auth.uid === $uid',
+          idx: {
+            '.validate': "newData.hasChildren(['ts','json'])",
+            ts: {'.validate': 'newData.isNumber()'},
+            json: {'.validate': 'newData.isString() && newData.val().length <= 200000'},
+            '$other': {'.validate': false}},
+          b: {
+            '$fid': {
+              '.validate': '$fid.matches(/^[A-Za-z0-9_-]{1,40}$/)',
+              '$i': {'.validate': 'newData.isString() && newData.val().length <= 800000 && $i.matches(/^[0-9]{1,2}$/)'}}},
+          '$other': {'.validate': false}}},
+      friends: {'.read': 'auth != null', '$u': {'$o': {'.write': 'auth != null && (' + own('$u') + ' || (' + own('$o') + " && (!newData.exists() || root.child('requests').child($o).child($u).exists())))", '.validate': 'newData.val() === true'}}},
+      requests: {'$to': {'.read': 'auth != null && ' + own('$to'), '$from': {'.read': 'auth != null && ' + own('$from'), '.write': 'auth != null && (' + own('$from') + ' || ' + own('$to') + ')', '.validate': "newData.hasChildren(['ts','name']) && newData.child('name').isString() && newData.child('name').val().length <= 20 && newData.child('ts').isNumber()"}}},
+      outbox: {'$from': {'.read': 'auth != null && ' + own('$from'), '$to': {'.write': 'auth != null && (' + own('$from') + ' || (' + own('$to') + ' && !newData.exists()))', '.validate': 'newData.val() === true'}}},
+      cheers: {'$to': {'.read': 'auth != null && ' + own('$to'), '.write': 'auth != null && !newData.exists() && ' + own('$to'), '$id': {'.write': 'auth != null && ((!newData.exists() && ' + own('$to') + ") || (root.child('profiles').child(newData.child('from').val()).child('uid').val() === auth.uid && root.child('friends').child($to).child(newData.child('from').val()).exists()))", '.validate': "newData.hasChildren(['from','emoji','ts']) && newData.child('emoji').isString() && newData.child('emoji').val().length < 9 && newData.child('from').isString()"}}},
+      chats: {'$o': {'$f': {'.read': 'auth != null && ' + own('$o'), '$id': {'.write': 'auth != null && (' + own('$o') + " || (root.child('profiles').child(newData.child('from').val()).child('uid').val() === auth.uid && root.child('friends').child($o).child(newData.child('from').val()).exists()))", '.validate': "newData.hasChildren(['from','t','ts']) && newData.child('t').isString() && newData.child('t').val().length < 400 && newData.child('from').isString()"}}}}}},
   null,
   2);
 
@@ -3367,7 +3408,7 @@ const pubOf = u => ({uid: CS.uid, name: u.name, av: u.av, xp: u.xp, lv: lvl(u.xp
 const pushProfile = u => dbx('PUT', 'profiles/' + u.cloud.key, pubOf(u));
 async function pushBackup(u) {
   const b = JSON.parse(JSON.stringify(u));
-  ['pw', 'cloud', 'subjects', 'friends', 'reqs', 'sent', 'dirty', 'cloudTs', 'onlineFriends'].forEach(k => delete b[k]);
+  ['pw', 'cloud', 'subjects', 'friends', 'reqs', 'sent', 'dirty', 'cloudTs', 'onlineFriends', 'subTs', 'subDirty', 'fDelQ'].forEach(k => delete b[k]);
   const body = {upd: {'.sv': 'timestamp'}, data: b};
   if (JSON.stringify(body).length > 3e6) return;
   await dbx('PUT', 'userdata/' + CS.uid, body);}
@@ -3772,18 +3813,21 @@ function act(a, v, el) {
   } else if (a == 'go') {
     const n = form.un.trim(),
       k = n.toLowerCase();
-    if (!n || !form.pw) {
+    if (!n || !form.pw.trim()) {
       err = 'Enter a username and password.';
       return render();}
     if (mode == 'signup') {
       if (db.users[k]) {
         err = 'That username is taken.';
         return render();}
-      db.users[k] = {name: n, pw: hash(form.pw), av: pickAv, xp: 0, done: 0, chk: 0, best: 0, active: [], tasks: [], habits: [], subjects: [], schedule: [], decks: [], friends: [], reqs: [], sent: []};
-    } else if (!db.users[k] || db.users[k].pw !== hash(form.pw)) {
-      err = 'Wrong username or password.';
+      db.users[k] = {name: n, pw: hash(form.pw.trim()), av: pickAv, xp: 0, done: 0, chk: 0, best: 0, active: [], tasks: [], habits: [], subjects: [], schedule: [], decks: [], friends: [], reqs: [], sent: []};
+    } else if (!db.users[k]) {
+      err = 'No account named "' + n + '" on this device/browser. Accounts are stored per browser; tap a name under "Players here" or sign up.';
+      return render();
+    } else if (db.users[k].pw !== hash(form.pw) && db.users[k].pw !== hash(form.pw.trim())) {
+      err = 'Wrong password for ' + db.users[k].name + '. Check caps lock and stray spaces (tap 👁 to see it).';
       return render();}
-    const pw0 = form.pw;
+    const pw0 = mode == 'signup' || db.users[k].pw !== hash(form.pw) ? form.pw.trim() : form.pw;
     db.cur = k;
     form = {un: '', pw: ''};
     err = '';
@@ -5908,6 +5952,7 @@ async function wipeOnline(u) {
     } catch (e) {}}
   P['cheers/' + k] = null;
   P['userdata/' + uid] = null;
+  P['files/' + uid] = null;
   await dbx('PATCH', '', P);
   await dbx('DELETE', 'profiles/' + k);
   try {
@@ -8280,6 +8325,283 @@ html.standalone body{padding-top:env(safe-area-inset-top,0px)}
   var tc=document.querySelector('meta[name=theme-color]');
   function sync(){if(!tc)return;var t=document.documentElement.dataset.theme,d=t?t=='dark':matchMedia('(prefers-color-scheme:dark)').matches;tc.setAttribute('content',d?'#070d27':'#2f5bff');}
   sync();new MutationObserver(sync).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+})();
+</script>
+<script id="auth-fix-js">
+(function () {
+  var nostore = false;
+  try { localStorage.setItem('__aq', '1'); nostore = localStorage.getItem('__aq') !== '1'; localStorage.removeItem('__aq'); } catch (e) { nostore = true; }
+  var _a = auth;
+  auth = function () {
+    var h = _a();
+    h = h.replace('id="un"', 'id="un" autocapitalize="off" autocorrect="off" spellcheck="false"')
+         .replace('id="pw"', 'id="pw" autocapitalize="off" autocorrect="off" spellcheck="false"')
+         .replace(/(<input id="pw"[^>]*>)/, '<div class="pw-wrap">$1<button type="button" class="pw-eye" data-eye="1" aria-label="Show password" title="Show / hide password">👁</button></div>');
+    if (nostore) h = h.replace('<div class="seg">', '<div class="err" style="margin:8px 0">⚠️ This browser is not saving data (private mode or a file preview), so accounts will disappear when you close the page. Open the file in Chrome or Safari normally, or host it, then sign up again.</div><div class="seg">');
+    return h; };
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-eye]');
+    if (!b) return;
+    var i = document.getElementById('pw');
+    if (i) { i.type = i.type === 'password' ? 'text' : 'password'; b.style.opacity = i.type === 'text' ? '1' : '.55'; }
+  });
+  render();
+})();
+</script>
+<style>.pw-wrap{position:relative}.pw-wrap input{padding-right:48px}.pw-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:0;font-size:20px;opacity:.55;cursor:pointer;padding:8px}</style>
+<script id="cross-device-js">
+/* ===== Log in on any device: sign in to the online account and pull it down ===== */
+(function () {
+  const call = (ep, body) => jfetch('https://identitytoolkit.googleapis.com/v1/accounts:' + ep + '?key=' + encodeURIComponent(cfg().apiKey), {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+  const isCred = e => /INVALID_LOGIN_CREDENTIALS|EMAIL_NOT_FOUND|INVALID_PASSWORD/.test(String((e && e.message) || e));
+  const isNet = e => /Failed to fetch|NetworkError|Load failed|NETWORK/i.test(String((e && e.message) || e));
+  let busy = false;
+
+  async function cloudLogin(n, pw) {
+    const k = n.toLowerCase(), ck = ckey(k);
+    const j = await call('signInWithPassword', {email: ck + '@questly.app', password: pw, returnSecureToken: true});
+    CS = {id: j.idToken, rt: j.refreshToken, uid: j.localId, exp: Date.now() + N(j.expiresIn) * 1000};
+    let bk = null, pf = null;
+    try { bk = await dbx('GET', 'userdata/' + CS.uid); } catch (e) {}
+    try { pf = await dbx('GET', 'profiles/' + ck); } catch (e) {}
+    let u = db.users[k];
+    const fresh = !u;
+    if (fresh) u = db.users[k] = {name: (pf && pf.name) || n, pw: hash(pw), av: (pf && AV.includes(pf.av) && pf.av) || '🚀', xp: 0, done: 0, chk: 0, best: 0, active: [], tasks: [], habits: [], subjects: [], schedule: [], decks: [], friends: [], reqs: [], sent: []};
+    u.pw = hash(pw);
+    u.cloud = {rt: CS.rt, uid: CS.uid, key: ck};
+    if (bk && bk.data && (fresh || N(bk.data.xp) >= N(u.xp))) {
+      restoreFrom(u, bk.data);
+      u.cloudTs = N(bk.upd);
+      u.dirty = false;
+    } else if (!fresh) u.dirty = true; /* this device is ahead: push it up */
+    fixUser(u);
+    return k;
+  }
+  function enter(k) {
+    db.cur = k; form = {un: '', pw: ''}; err = ''; tab = 'quests';
+    save(); render(); sfx.ok();
+    const u = db.users[k];
+    try { if (u && u.cloud) cloudSync(u); } catch (e) {}
+  }
+  const orig = () => { window.__aqBypass = true; try { act('go'); } finally { window.__aqBypass = false; } };
+
+  document.addEventListener('click', async function (e) {
+    const el = e.target.closest && e.target.closest('[data-act="go"]');
+    if (!el || window.__aqBypass || busy || !cloudReady()) return;
+    const n = form.un.trim(), k = n.toLowerCase(), pw = form.pw.trim();
+    if (!n || !pw) return;
+    const local = db.users[k];
+    const localOk = local && (local.pw === hash(form.pw) || local.pw === hash(pw));
+
+    if (mode == 'login' && !localOk) {
+      /* unknown here, or password differs from this device's copy: ask the cloud */
+      e.stopImmediatePropagation();
+      busy = true; toast('Signing in online… ☁️');
+      try { enter(await cloudLogin(n, pw)); toast('Welcome back! Your account is synced ☁️'); }
+      catch (er) {
+        if (isCred(er)) { if (local) return orig(); err = 'No account with that username and password — here or online. Check the spelling, or sign up.'; }
+        else if (isNet(er)) { if (local) return orig(); err = 'You are offline, and this device has no account named "' + n + '". Connect to the internet to log in.'; }
+        else err = cloudMsg(er);
+        render();
+      } finally { busy = false; }
+    } else if (mode == 'signup' && !local) {
+      /* already registered online with this same password? then just sign in */
+      const gv = ((document.getElementById('gmSu') || {}).value || '').trim();
+      e.stopImmediatePropagation();
+      busy = true; toast('Checking online… ☁️');
+      try { enter(await cloudLogin(n, pw)); toast('That account already exists online — signed you in ☁️'); }
+      catch (er) {
+        orig();
+        const u = db.users[k];
+        if (u && !u.gmail && gv) { u.gmail = {addr: gv.toLowerCase(), verified: false, at: Date.now()}; save(); render(); }
+      } finally { busy = false; }
+    }
+  }, true);
+
+  /* friendlier footer */
+  const _a = auth;
+  auth = function () {
+    let h = _a();
+    if (cloudReady()) h = h.replace('Accounts are saved in this browser only, so they are not secure storage.', '☁️ Your account syncs online: log in on any phone, tablet or computer with the same username and password.');
+    return h; };
+  render();
+})();
+</script>
+<script id="file-sync-js">
+/* ===== Reviewer files: saved on-device (IndexedDB) and synced to the account ===== */
+(function () {
+  const MAX = 10 * 1024 * 1024, CH = 699996;
+  const OK = /\.(pdf|docx?|pptx?|xlsx?|txt|png|jpe?g|webp|zip)$/i;
+  const VIEW = /^(application\/pdf|image\/|text\/plain)/;
+  const mem = new Map();
+  let _db = null;
+  const idb = () => _db || (_db = new Promise((res, rej) => {
+    try { const r = indexedDB.open('aq-files', 1); r.onupgradeneeded = () => r.result.createObjectStore('b'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); }}));
+  const tx = async (mode, fn) => { const d = await idb(); return new Promise((res, rej) => { const q = fn(d.transaction('b', mode).objectStore('b')); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); };
+  const kk = fid => db.cur + ':' + fid;
+  const bGet = async fid => { try { const v = await tx('readonly', s => s.get(kk(fid))); if (v) return v; } catch (e) {} return mem.get(kk(fid)) || null; };
+  const bPut = async (fid, blob) => { mem.set(kk(fid), blob); try { await tx('readwrite', s => s.put(blob, kk(fid))); } catch (e) {} };
+  const bDel = async fid => { mem.delete(kk(fid)); try { await tx('readwrite', s => s.delete(kk(fid))); } catch (e) {} };
+
+  const clean = u => (u.subjects || []).map(s => ({id: s.id, name: s.name, files: (s.files || []).filter(f => f.id).map(f => ({id: f.id, name: f.name, type: f.type || '', size: f.size || 0, ts: f.ts || 0, n: f.n || 0, up: !!f.up}))}));
+  const online = u => !!(u && u.cloud && cloudReady());
+
+  async function toB64(blob) {
+    const buf = new Uint8Array(await blob.arrayBuffer());
+    let bin = '';
+    for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+    return btoa(bin); }
+  async function upload(u, f, blob) {
+    const b64 = await toB64(blob), n = Math.max(1, Math.ceil(b64.length / CH));
+    await tok();
+    for (let i = 0; i < n; i++) await dbx('PUT', 'files/' + u.cloud.uid + '/b/' + f.id + '/' + i, b64.slice(i * CH, (i + 1) * CH));
+    f.n = n; f.up = true; }
+  async function download(u, f) {
+    const o = await dbx('GET', 'files/' + u.cloud.uid + '/b/' + f.id);
+    if (!o) return null;
+    const parts = Array.isArray(o) ? o : Object.keys(o).sort((a, b) => a - b).map(k => o[k]);
+    const arr = parts.map(p => { const bin = atob(p), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return a; });
+    return new Blob(arr, {type: f.type || 'application/octet-stream'}); }
+
+  /* ---- subject / file index ---- */
+  async function pushIdx(u) {
+    await tok();
+    await dbx('PUT', 'files/' + u.cloud.uid + '/idx', {ts: {'.sv': 'timestamp'}, json: JSON.stringify(clean(u))});
+    u.subTs = N(await dbx('GET', 'files/' + u.cloud.uid + '/idx/ts'));
+    u.subDirty = false; }
+  function merge(local, remote) {
+    const out = local.map(s => Object.assign({}, s, {files: (s.files || []).slice()}));
+    remote.forEach(r => {
+      const m = out.find(s => s.id == r.id);
+      if (!m) { out.push(r); return; }
+      (r.files || []).forEach(f => { if (!m.files.some(x => x.id == f.id)) m.files.push(f); }); });
+    return out; }
+  async function pullIdx(u) {
+    const ts = N(await dbx('GET', 'files/' + u.cloud.uid + '/idx/ts'));
+    if (!ts || ts <= N(u.subTs)) return false;
+    const r = await dbx('GET', 'files/' + u.cloud.uid + '/idx');
+    let rem = [];
+    try { rem = JSON.parse((r && r.json) || '[]'); } catch (e) {}
+    if (!Array.isArray(rem)) rem = [];
+    const keepLocal = new Map();
+    (u.subjects || []).forEach(s => (s.files || []).forEach(f => keepLocal.set(f.id, f)));
+    u.subjects = u.subDirty ? merge(u.subjects || [], rem) : rem;
+    u.subjects.forEach(s => (s.files || []).forEach(f => { const l = keepLocal.get(f.id); if (l && l.up === false && !f.up) f.up = false; }));
+    u.subTs = ts;
+    if (u.subDirty) u.subDirty = true;
+    return true; }
+
+  let busy = false, timer = 0, again = false;
+  async function syncFiles(u) {
+    if (!online(u)) return;
+    if (busy) { again = true; return; }
+    busy = true;
+    let changed = false;
+    try {
+      /* convert files saved by older versions (data URLs) */
+      for (const s of (u.subjects || [])) for (const f of (s.files || [])) {
+        if (f.data && String(f.data).indexOf('data:') == 0) {
+          try { const b = await (await fetch(f.data)).blob(); await bPut(f.id, b); f.up = false; f.ts = f.ts || Date.now(); delete f.data; u.subDirty = true; changed = true; } catch (e) {}}}
+      if (await pullIdx(u)) changed = true;
+      /* upload pending files */
+      for (const s of (u.subjects || [])) for (const f of (s.files || [])) {
+        if (f.up) continue;
+        const b = await bGet(f.id);
+        if (!b) continue;
+        try { await upload(u, f, b); u.subDirty = true; changed = true; } catch (e) { break; }}
+      /* delete removed files from the cloud */
+      if (Array.isArray(u.fDelQ) && u.fDelQ.length) {
+        const rest = [];
+        for (const id of u.fDelQ) { try { await dbx('DELETE', 'files/' + u.cloud.uid + '/b/' + id); } catch (e) { rest.push(id); }}
+        u.fDelQ = rest; }
+      if (u.subDirty) { await pushIdx(u); changed = true; }
+    } catch (e) {
+    } finally {
+      busy = false;
+      if (again) { again = false; setTimeout(() => { const c = me(); if (c) syncFiles(c); }, 500); }
+      saveLocal();
+      if (changed && me() === u && tab == 'reviewers' && !document.activeElement.matches('input,textarea')) render(); }}
+  const later = (u, ms) => { u.subDirty = true; saveLocal(); clearTimeout(timer); timer = setTimeout(() => { const c = me(); if (c) syncFiles(c); }, ms || 1200); };
+
+  /* ---- hooks into the existing cloud sync ---- */
+  const _cs = cloudSync;
+  cloudSync = async function (u, manual) {
+    try { await _cs.apply(this, arguments); } finally { try { await syncFiles(u); } catch (e) {} }};
+  const _rf = restoreFrom;
+  restoreFrom = function (u, d) { const k = {subTs: u.subTs, subDirty: u.subDirty, fDelQ: u.fDelQ}; _rf(u, d); Object.assign(u, k); };
+  addEventListener('online', () => { const u = me(); if (u) syncFiles(u); });
+
+  /* ---- delete handling ---- */
+  const _act = act;
+  act = function (a, v, el) {
+    if (a != 'fdel' && a != 'sdel' && a != 'addsubject') return _act(a, v, el);
+    const u = me();
+    let ids = [];
+    if (u && a == 'fdel') ids = [String(v).split(':')[1]];
+    if (u && a == 'sdel') { const s = (u.subjects || []).find(x => x.id == v); ids = s ? (s.files || []).map(f => f.id) : []; }
+    const before = u ? clean(u).length + ':' + clean(u).reduce((n, s) => n + s.files.length, 0) : '';
+    _act(a, v, el);
+    if (!u) return;
+    ids.filter(Boolean).forEach(id => { bDel(id); u.fDelQ = (u.fDelQ || []).concat(id); });
+    if (before !== clean(u).length + ':' + clean(u).reduce((n, s) => n + s.files.length, 0)) later(u, 600);
+  };
+
+  /* ---- open a file ---- */
+  function openBlob(blob, f, w) {
+    const url = URL.createObjectURL(blob);
+    if (w && VIEW.test(blob.type || f.type || '')) { try { w.location.href = url; } catch (e) {} }
+    else { if (w) try { w.close(); } catch (e) {} const a = document.createElement('a'); a.href = url; a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); }
+    setTimeout(() => URL.revokeObjectURL(url), 30 * 60 * 1000); }
+
+  document.addEventListener('click', async function (e) {
+    const el = e.target.closest && e.target.closest('[data-aqf]');
+    if (!el) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    const u = me(); if (!u) return;
+    const [sid, fid] = el.dataset.aqf.split(':');
+    const s = (u.subjects || []).find(x => x.id == sid), f = s && (s.files || []).find(x => x.id == fid);
+    if (!f) return;
+    const viewable = VIEW.test(f.type || '') || /\.(pdf|png|jpe?g|webp|txt)$/i.test(f.name);
+    const w = viewable ? window.open('', '_blank') : null;
+    try {
+      let blob = await bGet(f.id);
+      if (!blob && f.data) blob = await (await fetch(f.data)).blob();
+      if (!blob) {
+        if (!online(u)) throw new Error('offline');
+        toast('Downloading ' + f.name + '… ☁️');
+        blob = await download(u, f);
+        if (!blob) throw new Error('missing');
+        await bPut(f.id, blob); }
+      openBlob(blob, f, w);
+    } catch (er) {
+      if (w) try { w.close(); } catch (x) {}
+      toast(er && er.message == 'offline' ? 'Go online to download this file first.' : er && er.message == 'missing' ? 'That file is still uploading from your other device.' : cloudMsg(er)); }
+  }, true);
+
+  /* ---- add a file ---- */
+  document.addEventListener('change', async function (e) {
+    const input = e.target;
+    if (!input.matches || !input.matches('input[type=file][data-subject]')) return;
+    e.stopImmediatePropagation();
+    const file = input.files && input.files[0];
+    input.value = '';
+    const u = me(); if (!file || !u) return;
+    if (!OK.test(file.name)) return toast('That file type isn\'t supported.');
+    if (file.size > MAX) return toast('Files can be up to 10 MB.');
+    const s = (u.subjects || []).find(x => x.id == input.dataset.subject);
+    if (!s) return;
+    const f = {id: 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: file.name.slice(0, 120), type: file.type || '', size: file.size, ts: Date.now(), up: false};
+    s.files = s.files || [];
+    s.files.unshift(f);
+    const blob = file.slice(0, file.size, file.type);
+    await bPut(f.id, blob);
+    later(u, 300);
+    render();
+    toast(online(u) ? 'Saved! Syncing to your devices ☁️' : 'Saved on this device 📱 (it will sync when you\'re online)');
+    sfx.pop();
+  }, true);
+
+  render();
 })();
 </script>
 </body></html>
