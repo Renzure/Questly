@@ -3,6 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="AstroQuest">
+  <meta name="format-detection" content="telephone=no">
+  <script>
+  /* Phones & tablets: static background + app mode */
+  (function(){
+    var m=function(q){return window.matchMedia&&matchMedia(q).matches},
+      touch=m('(hover:none) and (pointer:coarse)')||(navigator.maxTouchPoints>1&&Math.min(screen.width,screen.height)<1100);
+    window.AQ_TOUCH=touch;
+    if(touch)document.documentElement.classList.add('static-bg','app-mode');
+    if(m('(display-mode:standalone)')||navigator.standalone)document.documentElement.classList.add('standalone');
+  })();
+  </script>
   <title>AstroQuest - Enhance Your Learning</title>
   <meta name="theme-color" content="#2f5bff">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'%3E%3Cdefs%3E%3ClinearGradient%20id='g'%20x1='0'%20y1='0'%20x2='0'%20y2='1'%3E%3Cstop%20offset='0'%20stop-color='%236d28d9'/%3E%3Cstop%20offset='.55'%20stop-color='%23c026d3'/%3E%3Cstop%20offset='1'%20stop-color='%23f472b6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width='40'%20height='40'%20rx='10'%20fill='url%28%23g%29'/%3E%3Ccircle%20cx='31'%20cy='33'%20r='5.2'%20fill='%23fde68a'/%3E%3Cg%20transform='translate%285%203.5%29%20scale%28.75%29'%3E%3Cg%20class='flame'%3E%3Cpath%20d='M16.8%2029%20Q20%2041%2023.2%2029Z'%20fill='%23ff5a36'/%3E%3Cpath%20d='M18.3%2029%20Q20%2037%2021.7%2029Z'%20fill='%23fff2a8'/%3E%3C/g%3E%3Cpath%20d='M14%2021%20L7.5%2031%20L14.5%2028.5Z'%20fill='%232f5bff'%20stroke='%230f1a44'%20stroke-width='1.5'%20stroke-linejoin='round'/%3E%3Cpath%20d='M26%2021%20L32.5%2031%20L25.5%2028.5Z'%20fill='%232f5bff'%20stroke='%230f1a44'%20stroke-width='1.5'%20stroke-linejoin='round'/%3E%3Cpath%20d='M20%202.5%20C26.2%208.5%2027.4%2017%2026.2%2028%20L13.8%2028%20C12.6%2017%2013.8%208.5%2020%202.5Z'%20fill='%23fff'%20stroke='%230f1a44'%20stroke-width='1.7'%20stroke-linejoin='round'/%3E%3Cpath%20d='M20%202.5%20C23%205.5%2024.6%208.5%2025.3%2011%20L14.7%2011%20C15.4%208.5%2017%205.5%2020%202.5Z'%20fill='%23ff5a36'/%3E%3Ccircle%20cx='20'%20cy='16.5'%20r='3.4'%20fill='%236a8dff'%20stroke='%230f1a44'%20stroke-width='1.5'/%3E%3Crect%20x='16.6'%20y='28'%20width='6.8'%20height='2.6'%20rx='1'%20fill='%230f1a44'/%3E%3C/g%3E%3C/svg%3E">
@@ -4406,7 +4421,7 @@ window.addEventListener('online', () => {
   <script>
 /* ===== COOL LAYER: living background, spotlight, tilt, ripples ===== */
 (function () {
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches,
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches || !!window.AQ_TOUCH,
     fine = matchMedia('(hover:hover)').matches;
   ['a1', 'a2', 'a3'].forEach(c => {
     const d = document.createElement('div');
@@ -4516,7 +4531,17 @@ window.addEventListener('online', () => {
     S = S.filter(s => s.l > 0);
     if (!reduce && !document.hidden) requestAnimationFrame(frame);}
   size();
-  addEventListener('resize', size, {passive: true});
+  let lastW = innerWidth;
+  const redraw = () => { fr = 0; frame(); };
+  addEventListener('resize', () => {
+    if (!reduce) return size();
+    /* static mode: ignore phone toolbar show/hide; only re-lay on real width change (rotation) */
+    if (innerWidth === lastW) return;
+    lastW = innerWidth; size(); redraw();}, {passive: true});
+  addEventListener('orientationchange', () => { if (reduce) setTimeout(() => { lastW = innerWidth; size(); redraw(); }, 300); });
+  if (reduce) {
+    new MutationObserver(redraw).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+    try { matchMedia('(prefers-color-scheme:dark)').addEventListener('change', redraw); } catch (e) {}}
   dark = isDark();
   reduce ? frame() : requestAnimationFrame(frame);
   document.addEventListener('visibilitychange', () => {
@@ -7855,7 +7880,7 @@ function deadlineCard(u) {
     const h = _st(u),
       i = h.indexOf('<div class="card nofloat" id="themesCard"'),
       c = `<div class="card nofloat" id="fpSet"><h3 style="margin:0 0 4px;font-size:19px">🔑 Password recovery email</h3><div class="mut small">${u.gmail && u.gmail.verified ? 'If you forget your password, a reset code will be emailed to ' + esc(mask(u.gmail.addr)) + '.' : 'Link and verify a Gmail above to enable "Forgot password?" for this account.'}</div>${setup()}</div>`;
-    return i < 0 ? h + c : h.slice(0, i) + c + h.slice(i);};
+    return h; /* recovery-email card hidden */};
 
   render();
 })();</script>
@@ -7935,4 +7960,326 @@ function deadlineCard(u) {
   render();
 })();</script>
 
-  </body></html>
+  <style id="schPlus-css">
+.sp-bar{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.sp-bar .ghost{font-size:13px;padding:6px 11px}
+.sp-bar .ghost.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.sp-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0 4px}
+.sp-stats div{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:8px;text-align:center;font-size:12px;color:var(--mut)}
+.sp-stats b{display:block;font-size:18px;color:var(--ink)}
+.sp-chips{display:flex;gap:5px;flex-wrap:wrap;margin:4px 0 8px}
+.sp-chips button{border:1px solid var(--line);background:var(--bg);color:var(--mut);border-radius:99px;padding:6px 11px;font:inherit;font-size:13px;cursor:pointer}
+.sp-chips button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.sp-sw{display:flex;gap:7px;flex-wrap:wrap;margin:4px 0 8px;align-items:center}
+.sp-sw button{width:26px;height:26px;border-radius:50%;border:2px solid transparent;cursor:pointer;background:var(--c)}
+.sp-sw button.on{border-color:var(--ink);box-shadow:0 0 0 2px var(--card) inset}
+.sp-sw .auto{width:auto;border-radius:99px;padding:0 10px;background:var(--bg);color:var(--mut);font-size:12px;border:1px solid var(--line)}
+.sp-sw .auto.on{border-color:var(--ink);color:var(--ink)}
+.sp-form textarea{width:100%;min-height:54px;resize:vertical;font:inherit;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:10px}
+.sp-acts{display:flex;gap:2px;flex:none}
+.sp-acts button{background:none;border:0;cursor:pointer;font-size:16px;padding:4px 5px;border-radius:8px}
+.sp-acts button:hover{background:var(--bg)}
+.sp-acts .x{font-size:22px;color:var(--mut)}
+.sp-note{font-size:12px;color:var(--mut);margin-top:2px}
+.sp-warn{display:inline-block;font-size:11px;font-weight:600;color:#b45309;background:#fef3c7;border-radius:99px;padding:1px 8px;margin-top:3px}
+.sp-att{font-size:12px;border:1px solid var(--line);background:none;color:var(--mut);border-radius:99px;padding:3px 10px;cursor:pointer;margin-top:4px}
+.sp-att.done{background:#16a34a;border-color:#16a34a;color:#fff;cursor:default}
+.sp-gap{list-style:none;display:flex;align-items:center;gap:8px;margin:2px 0 2px 17px;padding:2px 0;font-size:12px;color:var(--mut)}
+.sp-gap button{font-size:12px;padding:3px 10px}
+.cls.sp-live{outline:2px solid var(--blue);outline-offset:2px;border-radius:12px}
+.sp-wk{overflow-x:auto;padding-bottom:4px}
+.sp-grid{display:grid;grid-template-columns:34px repeat(7,minmax(70px,1fr));min-width:560px;font-size:11px}
+.sp-grid .h{text-align:center;font-weight:600;padding:4px 0;color:var(--mut)}
+.sp-grid .h.today{color:var(--blue)}
+.sp-hrs{position:relative}
+.sp-hrs span{position:absolute;right:4px;transform:translateY(-50%);color:var(--mut);font-size:10px}
+.sp-col{position:relative;border-left:1px solid var(--line);background:repeating-linear-gradient(to bottom,transparent 0,transparent 43px,var(--line) 43px,var(--line) 44px)}
+.sp-col.today{background-color:rgba(106,141,255,.07)}
+.sp-blk{position:absolute;left:2px;right:2px;overflow:hidden;border-radius:8px;padding:3px 5px;cursor:pointer;color:var(--ink);line-height:1.25;background:color-mix(in srgb,var(--c) 30%,var(--card));border-left:3px solid var(--c)}
+.sp-blk b{display:block;font-size:11px}
+.sp-blk.bad{box-shadow:0 0 0 2px #f59e0b inset}
+.sp-now{position:absolute;left:0;right:0;height:2px;background:#ef4444;z-index:2}
+.sp-now::before{content:"";position:absolute;left:-3px;top:-3px;width:8px;height:8px;border-radius:50%;background:#ef4444}
+</style>
+<script id="schPlus-js">
+(function () {
+  'use strict';
+  const COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#3b82f6', '#8b5cf6', '#ec4899'];
+  const SD = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  const S = {view: 'list', open: false, edit: null, days: null, f: {name: '', start: '08:00', end: '09:30', room: '', notes: '', color: ''}, notified: {}};
+  const tm = t => { const [h, m] = String(t).split(':').map(Number); return h * 60 + m; };
+  const hm = n => { n = Math.round(n); const h = Math.floor(n / 60), m = n % 60; return h ? h + 'h' + (m ? ' ' + m + 'm' : '') : m + 'm'; };
+  const nowMin = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
+  const todayIdx = () => (new Date().getDay() + 6) % 7;
+  const colOf = c => c.color || colorFor(c.name);
+  const byStart = (a, b) => a.start.localeCompare(b.start);
+  const overlap = (a, b) => a.id != b.id && a.day == b.day && a.start < b.end && b.start < a.end;
+  const clashes = (list, c) => list.filter(o => overlap(c, o));
+
+  function grab() {
+    const g = id => { const e = document.getElementById(id); return e ? e.value : null; };
+    if (!document.getElementById('spName')) return;
+    S.f.name = g('spName'); S.f.start = g('spStart') || S.f.start; S.f.end = g('spEnd') || S.f.end;
+    S.f.room = g('spRoom'); S.f.notes = g('spNotes');
+  }
+  function resetForm(keepTimes) {
+    const st = keepTimes ? S.f.start : '08:00', en = keepTimes ? S.f.end : '09:30';
+    S.f = {name: '', start: st, end: en, room: '', notes: '', color: ''};
+    S.edit = null; S.days = null; S.open = false;
+  }
+
+  function form(u) {
+    const ed = S.edit && u.schedule.find(c => c.id == S.edit);
+    const days = S.days || [schDay == null ? todayIdx() : schDay];
+    const f = S.f;
+    return `<div class="card sp-form" id="spForm">
+  <h3 style="margin:0 0 6px;font-size:19px">${ed ? '✏️ Edit class' : '➕ Add class'}</h3>
+  <input id="spName" placeholder="Class / subject (e.g. Calculus 1)" maxlength="50" value="${esc(f.name)}">
+  <div class="mut small" style="margin-top:8px">${ed ? 'Day' : 'Day(s) — tap several to repeat this class'}</div>
+  <div class="sp-chips">${DAYS.map((d, i) => `<button class="${days.includes(i) ? 'on' : ''}" data-act="sp_day" data-v="${i}" title="${d}">${d.slice(0, 3)}</button>`).join('')}</div>
+  <div class="sch-form">
+   <div><label for="spStart">Start</label><input id="spStart" type="time" value="${f.start}"></div>
+   <div><label for="spEnd">End</label><input id="spEnd" type="time" value="${f.end}"></div>
+   <div class="full"><label for="spRoom">Room / teacher (optional)</label><input id="spRoom" placeholder="e.g. Room 204 · Prof. Reyes" maxlength="50" value="${esc(f.room)}"></div>
+   <div class="full"><label for="spNotes">Notes (optional)</label><textarea id="spNotes" maxlength="200" placeholder="Bring calculator, quiz every Friday…">${esc(f.notes)}</textarea></div>
+  </div>
+  <div class="mut small">Color</div>
+  <div class="sp-sw"><button class="auto ${f.color ? '' : 'on'}" data-act="sp_color" data-v="">Auto</button>${COLORS.map(c => `<button style="--c:${c}" class="${f.color == c ? 'on' : ''}" data-act="sp_color" data-v="${c}" title="${c}"></button>`).join('')}</div>
+  <button class="btn" data-act="sp_save">${ed ? 'Save changes' : 'Add class'}</button>
+  <button class="ghost" style="width:100%;margin-top:8px" data-act="sp_cancel">Cancel</button>
+ </div>`;
+  }
+
+  function stats(L) {
+    const mins = L.reduce((s, c) => s + tm(c.end) - tm(c.start), 0);
+    const per = DAYS.map((_, i) => L.filter(c => c.day == i).length);
+    const mx = Math.max(...per);
+    return `<div class="sp-stats"><div><b>${L.length}</b>classes / week</div><div><b>${hm(mins)}</b>in class weekly</div><div><b>${mx ? DAYS[per.indexOf(mx)].slice(0, 3) : '—'}</b>busiest day</div></div>`;
+  }
+
+  function listView(u, L) {
+    const ti = todayIdx(), nm = nowMin();
+    const groups = DAYS.map((d, i) => ({d, i, list: L.filter(c => c.day == i).sort(byStart)})).filter(g => g.list.length);
+    if (!groups.length) return '<div class="card"><div class="empty">🗓️<br>No classes yet.<br>Tap “Add class” to build your week!</div></div>';
+    const td = today();
+    const row = (c, g) => {
+      const live = g.i == ti && tm(c.start) <= nm && nm < tm(c.end);
+      const bad = clashes(L, c), att = (c.att || []).includes(td), canAtt = g.i == ti && tm(c.start) <= nm;
+      return `<li class="cls ${live ? 'sp-live' : ''}" style="--c:${colOf(c)}"><span class="cbar"></span><div class="time">${fmtT(c.start)}<br><span class="mut small">to ${fmtT(c.end)}</span></div>
+  <div class="grow"><b>${esc(c.name)}</b>${live ? ' <span class="tag" style="background:var(--blue);color:#fff;border-radius:99px;font-size:10px;padding:1px 7px">NOW</span>' : ''}${c.room ? `<div class="mut small">📍 ${esc(c.room)}</div>` : ''}${c.notes ? `<div class="sp-note">📝 ${esc(c.notes)}</div>` : ''}${bad.length ? `<div class="sp-warn">⚠️ Overlaps ${esc(bad[0].name)}</div>` : ''}
+  ${att ? '<button class="sp-att done" disabled>✅ Attended</button>' : canAtt ? `<button class="sp-att" data-act="sp_att" data-v="${c.id}">🎓 I attended (+5 XP)</button>` : ''}${(c.att || []).length ? `<div class="sp-note">🎓 ${(c.att || []).length} attended</div>` : ''}</div>
+  <div class="sp-acts"><button data-act="sp_edit" data-v="${c.id}" title="Edit">✏️</button><button data-act="sp_dup" data-v="${c.id}" title="Duplicate">📑</button><button class="x" data-act="cdel" data-v="${c.id}" title="Remove">×</button></div></li>`;};
+    const gaps = g => {
+      const out = [];
+      g.list.forEach((c, k) => {
+        out.push(row(c, g));
+        const n = g.list[k + 1];
+        if (n) {
+          const gap = tm(n.start) - tm(c.end);
+          if (gap >= 30) out.push(`<li class="sp-gap">☕ ${hm(gap)} free${g.i == ti ? `<button class="ghost" data-act="sp_focus" data-v="${Math.min(gap, 120)}">🎯 Focus ${Math.min(gap, 120)} min</button>` : ''}</li>`);}});
+      return out.join('');};
+    return groups.map(g => `<div class="card"><div class="day-h"><b>${g.d}</b>${g.i == ti ? '<span class="tag">Today</span>' : ''}<span class="grow"></span><span class="mut small">${g.list.length} class${g.list.length > 1 ? 'es' : ''}</span></div><ul>${gaps(g)}</ul></div>`).join('');
+  }
+
+  function weekView(u, L) {
+    if (!L.length) return '<div class="card"><div class="empty">🗓️<br>No classes yet.<br>Tap “Add class” to build your week!</div></div>';
+    const HH = 44;
+    let lo = Math.floor(Math.min(...L.map(c => tm(c.start))) / 60), hi = Math.ceil(Math.max(...L.map(c => tm(c.end))) / 60);
+    lo = Math.max(0, Math.min(lo, 7)); hi = Math.min(24, Math.max(hi, lo + 4));
+    const ti = todayIdx(), nm = nowMin(), H = (hi - lo) * HH;
+    const hrs = `<div class="sp-hrs" style="height:${H}px">${Array.from({length: hi - lo + 1}, (_, i) => `<span style="top:${i * HH}px">${(lo + i) % 12 || 12}${lo + i < 12 || lo + i == 24 ? 'a' : 'p'}</span>`).join('')}</div>`;
+    const cols = DAYS.map((d, i) => {
+      const blks = L.filter(c => c.day == i).map(c => {
+        const top = (tm(c.start) - lo * 60) / 60 * HH, h = Math.max(20, (tm(c.end) - tm(c.start)) / 60 * HH - 2);
+        return `<div class="sp-blk ${clashes(L, c).length ? 'bad' : ''}" style="--c:${colOf(c)};top:${top}px;height:${h}px" data-act="sp_edit" data-v="${c.id}" title="${esc(c.name)} ${fmtT(c.start)}–${fmtT(c.end)}"><b>${esc(c.name)}</b>${fmtT(c.start).replace(' ', '')}</div>`;}).join('');
+      const now = i == ti && nm >= lo * 60 && nm <= hi * 60 ? `<div class="sp-now" style="top:${(nm - lo * 60) / 60 * HH}px"></div>` : '';
+      return `<div class="sp-col ${i == ti ? 'today' : ''}" style="height:${H}px">${blks}${now}</div>`;}).join('');
+    return `<div class="card"><div class="sp-wk"><div class="sp-grid"><div></div>${DAYS.map((d, i) => `<div class="h ${i == ti ? 'today' : ''}">${d.slice(0, 3)}</div>`).join('')}${hrs}${cols}</div></div><div class="mut small" style="margin-top:6px">Tap a block to edit it. Amber outline = overlapping classes.</div></div>`;
+  }
+
+  schedule = function (u) {
+    u.schedule = u.schedule || [];
+    const L = u.schedule, showForm = S.open || S.edit || !L.length;
+    const rem = u.schRem || 0;
+    return `<div class="card">
+  <h3 style="margin:0 0 2px;font-size:19px">🗓️ My Class Schedule</h3>
+  <div class="mut small">Add, edit and rearrange your week any time.</div>
+  ${L.length ? stats(L) : ''}
+  <div class="sp-bar">
+   <button class="ghost ${S.view == 'list' ? 'on' : ''}" data-act="sp_view" data-v="list">☰ List</button>
+   <button class="ghost ${S.view == 'week' ? 'on' : ''}" data-act="sp_view" data-v="week">▦ Week</button>
+   <button class="ghost" data-act="sp_open">${showForm && !S.edit && L.length ? '✖ Close form' : '➕ Add class'}</button>
+   <button class="ghost ${rem ? 'on' : ''}" data-act="sp_rem" title="Heads-up while the app is open">🔔 ${rem ? rem + ' min before' : 'Reminders off'}</button>
+   ${L.length ? '<button class="ghost" data-act="sp_ics">📅 Export .ics</button>' : ''}
+  </div>
+ </div>
+ ${showForm ? form(u) : ''}
+ ${S.view == 'week' ? weekView(u, L) : listView(u, L)}`;};
+
+  function validate(u, f, days, skipId) {
+    if (!f.name.trim()) { toast('Enter a class name first.'); const e = $('#spName'); if (e) e.focus(); return false; }
+    if (!f.start || !f.end) { toast('Pick a start and end time.'); return false; }
+    if (f.end <= f.start) { toast('End time must be after the start time.'); return false; }
+    if (!days.length) { toast('Pick at least one day.'); return false; }
+    return true;
+  }
+
+  function icsDate(d, t) { const [h, m] = t.split(':'); return dstr(d).replace(/-/g, '') + 'T' + h.padStart(2, '0') + m + '00'; }
+  const icsEsc = s => String(s || '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/[,;]/g, m => '\\' + m);
+  function exportIcs(u) {
+    const BY = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
+    const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//AstroQuest//Schedule//EN', 'CALSCALE:GREGORIAN'];
+    u.schedule.forEach(c => {
+      const d = new Date();
+      while ((d.getDay() + 6) % 7 != c.day) d.setDate(d.getDate() + 1);
+      lines.push('BEGIN:VEVENT', 'UID:' + c.id + '@astroquest', 'DTSTAMP:' + new Date().toISOString().replace(/[-:]|\.\d+/g, ''),
+        'DTSTART:' + icsDate(d, c.start), 'DTEND:' + icsDate(d, c.end), 'RRULE:FREQ=WEEKLY;BYDAY=' + BY[c.day],
+        'SUMMARY:' + icsEsc(c.name), c.room ? 'LOCATION:' + icsEsc(c.room) : '', c.notes ? 'DESCRIPTION:' + icsEsc(c.notes) : '', 'END:VEVENT');});
+    lines.push('END:VCALENDAR');
+    const blob = new Blob([lines.filter(Boolean).join('\r\n')], {type: 'text/calendar'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'astroquest-schedule.ics';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    toast('Schedule exported! Import it into Google/Apple Calendar 📅');
+  }
+
+  const _act = act;
+  act = function (a, v, el) {
+    if (typeof a != 'string' || a.indexOf('sp_') != 0) return _act(a, v, el);
+    const u = me();
+    if (!u) return;
+    u.schedule = u.schedule || [];
+    grab();
+    const done = () => { save(); render(); };
+    if (a == 'sp_view') { S.view = v; render(); }
+    else if (a == 'sp_open') { if (S.open || S.edit) resetForm(true); else { S.open = true; S.days = null; } render(); }
+    else if (a == 'sp_cancel') { resetForm(true); render(); }
+    else if (a == 'sp_day') {
+      const i = +v, cur = (S.days || [schDay == null ? todayIdx() : schDay]).slice();
+      if (S.edit) S.days = [i];
+      else { const k = cur.indexOf(i); if (k >= 0) cur.splice(k, 1); else cur.push(i); S.days = cur.sort(); }
+      render();}
+    else if (a == 'sp_color') { S.f.color = v; render(); }
+    else if (a == 'sp_edit') {
+      const c = u.schedule.find(x => x.id == v); if (!c) return;
+      S.edit = c.id; S.open = true; S.days = [c.day];
+      S.f = {name: c.name, start: c.start, end: c.end, room: c.room || '', notes: c.notes || '', color: c.color || ''};
+      render(); const f = $('#spForm'); if (f) f.scrollIntoView({behavior: 'smooth', block: 'center'});}
+    else if (a == 'sp_dup') {
+      const c = u.schedule.find(x => x.id == v); if (!c) return;
+      const n = Object.assign({}, c, {id: Date.now(), att: []});
+      u.schedule.push(n);
+      S.edit = n.id; S.open = true; S.days = [n.day];
+      S.f = {name: n.name, start: n.start, end: n.end, room: n.room || '', notes: n.notes || '', color: n.color || ''};
+      save(); render(); toast('Duplicated — change the day or time, then save 📑');
+      const f = $('#spForm'); if (f) f.scrollIntoView({behavior: 'smooth', block: 'center'});}
+    else if (a == 'sp_save') {
+      const f = S.f, days = S.days || [schDay == null ? todayIdx() : schDay];
+      if (!validate(u, f, days)) return;
+      let touched = [];
+      if (S.edit) {
+        const c = u.schedule.find(x => x.id == S.edit);
+        if (c) { Object.assign(c, {name: f.name.trim(), day: days[0], start: f.start, end: f.end, room: f.room.trim(), notes: f.notes.trim()}); if (f.color) c.color = f.color; else delete c.color; touched = [c]; schDay = c.day; }
+      } else {
+        days.forEach((d, i) => {
+          const c = {id: Date.now() + i, name: f.name.trim(), day: d, start: f.start, end: f.end, room: f.room.trim(), notes: f.notes.trim(), att: []};
+          if (f.color) c.color = f.color;
+          u.schedule.push(c); touched.push(c);});
+        schDay = days[0];}
+      const bad = touched.map(c => clashes(u.schedule, c)[0]).find(Boolean);
+      const wasEdit = !!S.edit;
+      resetForm(true);
+      save(); render();
+      toast(bad ? '⚠️ Saved, but it overlaps ' + bad.name : wasEdit ? 'Class updated ✅' : touched.length > 1 ? touched.length + ' classes added! 🗓️' : 'Class added! 🗓️');
+      sfx.pop();}
+    else if (a == 'sp_att') {
+      const c = u.schedule.find(x => x.id == v), t = today();
+      if (!c) return; c.att = c.att || [];
+      if (c.att.includes(t)) return;
+      c.att.push(t);
+      award(u, 5, 'for showing up to ' + c.name + '! 🎓', el);
+      save(); render();}
+    else if (a == 'sp_focus') {
+      FT.len = Math.max(5, Math.min(240, +v || 25));
+      tab = 'focus'; render(); toast('Focus session set to ' + FT.len + ' min — hit Start! 🎯');}
+    else if (a == 'sp_rem') {
+      const steps = [0, 5, 10, 15], nx = steps[(steps.indexOf(u.schRem || 0) + 1) % steps.length];
+      u.schRem = nx;
+      if (nx && 'Notification' in window && Notification.permission == 'default') { try { Notification.requestPermission(); } catch (e) {} }
+      done(); toast(nx ? '🔔 I\'ll nudge you ' + nx + ' min before class (while this page is open)' : 'Reminders off');}
+    else if (a == 'sp_ics') exportIcs(u);
+  };
+
+  /* Class reminders while the app is open */
+  setInterval(() => {
+    const u = me();
+    if (!u || !u.schRem || !Array.isArray(u.schedule)) return;
+    const nm = nowMin(), td = today(), ti = todayIdx();
+    u.schedule.forEach(c => {
+      if (c.day != ti) return;
+      const wait = tm(c.start) - nm, key = c.id + td;
+      if (wait > 0 && wait <= u.schRem && !S.notified[key]) {
+        S.notified[key] = 1;
+        const msg = '⏰ ' + c.name + ' starts in ' + wait + ' min' + (c.room ? ' · ' + c.room : '');
+        toast(msg);
+        try { if ('Notification' in window && Notification.permission == 'granted') new Notification('AstroQuest', {body: msg}); } catch (e) {}
+      }});
+  }, 30000);
+
+  document.addEventListener('keydown', e => {
+    if (e.key == 'Enter' && e.target && (e.target.id == 'spName' || e.target.id == 'spRoom')) { e.preventDefault(); act('sp_save', null, e.target); }});
+
+  if (me()) render();
+})();
+</script>
+
+<style id="app-mode-css">
+/* ===== Static background on phones & tablets ===== */
+.static-bg .aur,.static-bg body::before,.static-bg body::after{animation:none!important;translate:none!important;will-change:auto}
+.static-bg #cg{display:none!important}
+.static-bg .aur{filter:blur(70px)}
+/* ===== App feel ===== */
+html.app-mode,html.app-mode body{overscroll-behavior:none;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html.app-mode *{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+html.app-mode body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+html.app-mode input,html.app-mode textarea,html.app-mode select,html.app-mode [contenteditable]{-webkit-user-select:text;user-select:text;font-size:max(16px,1em)}
+html.app-mode img{-webkit-user-drag:none;user-drag:none}
+html.app-mode button{-webkit-user-select:none;user-select:none}
+/* bottom navigation bar on phones & small tablets */
+@media (max-width:959px){
+  html.app-mode #app{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px))}
+  html.app-mode .tabs{position:fixed!important;left:0;right:0;bottom:0;top:auto!important;height:auto!important;width:auto!important;margin:0!important;gap:2px;z-index:60;border-radius:20px 20px 0 0;border:0;border-top:1px solid var(--line);padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px));background:color-mix(in srgb,var(--card) 92%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 -6px 24px rgba(0,0,0,.12);max-width:none}
+  html.app-mode .tabs::before{display:none!important}
+  html.app-mode .tabs button{flex:1 0 66px!important;flex-direction:column;display:flex;align-items:center;justify-content:center;gap:2px;padding:6px 4px!important;border-radius:14px}
+  html.app-mode .tabs .ic{font-size:22px;width:auto;line-height:1}
+  html.app-mode .tabs .lb{font-size:11px;line-height:1.1}
+  html.app-mode .tabs .sidetog{display:none!important}
+  html.app-mode #toast{bottom:calc(86px + env(safe-area-inset-bottom,0px))}
+}
+html.app-mode .tabs button{min-height:44px}
+/* standalone: respect the notch / status bar */
+html.standalone body{padding-top:env(safe-area-inset-top,0px)}
+</style>
+<script id="app-mode-js">
+(function(){
+  /* PWA manifest so Android/Chrome can "Install app" when hosted over https */
+  try{
+    if(/^https?:$/.test(location.protocol)&&!document.querySelector('link[rel=manifest]')){
+      var ic=document.querySelector('link[rel=icon]'),href=ic?ic.href:'';
+      var man={name:'AstroQuest',short_name:'AstroQuest',start_url:location.href.split('#')[0],scope:location.href.split('#')[0].replace(/[^\/]*$/,''),display:'standalone',orientation:'any',background_color:'#070d27',theme_color:'#2f5bff',icons:href?[{src:href,sizes:'any',type:'image/svg+xml',purpose:'any'}]:[]};
+      var l=document.createElement('link');l.rel='manifest';
+      l.href=URL.createObjectURL(new Blob([JSON.stringify(man)],{type:'application/manifest+json'}));
+      document.head.appendChild(l);}
+  }catch(e){}
+  /* block pinch-zoom & double-tap zoom on iOS Safari for an app-like feel */
+  if(window.AQ_TOUCH){
+    ['gesturestart','gesturechange'].forEach(function(t){document.addEventListener(t,function(e){e.preventDefault();},{passive:false});});
+  }
+  /* keep status-bar colour in sync with the theme */
+  var tc=document.querySelector('meta[name=theme-color]');
+  function sync(){if(!tc)return;var t=document.documentElement.dataset.theme,d=t?t=='dark':matchMedia('(prefers-color-scheme:dark)').matches;tc.setAttribute('content',d?'#070d27':'#2f5bff');}
+  sync();new MutationObserver(sync).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+})();
+</script>
+</body></html>
